@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Welcome to  www.bigmike.ch ! Leave a message for everyone to see.">
+    <meta name="keywords" content="Big Mike, personal project, web development">
+    <meta name="author" content="Big Mike">
+    <title>Welcome to Mike's Website</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+
+    <meta property="og:title" content="Welcome to Mike's Website">
+    <meta property="og:description" content="Welcome to www.bigmike.ch ! Leave a message for everyone to see.">
+    <meta property="og:image" content="https://www.bigmike.ch/images/9d878e595dc522b07a801eae0fc6974d.webp">
+    <meta property="og:url" content="https://www.bigmike.ch/">
+    <meta property="og:type" content="website">
+
+    <link rel="stylesheet" href="/styles.css">
+
+</head>
+
+<body>
+
+    <div class="container">
+
+        <div id="userCount" class="user-count">Connected users: <%= nbusers %></div>
+
+        <div class="message-box" id="messageBox">
+
+        </div>
+
+        <form class="form-container">
+            <input type="text" aria-label="Leave a message" name="message" required maxlength="200" placeholder="Leave any message (200 characters max)" class="input-box form-input">
+            <button type="submit" aria-label="Send message" class="button form-button">➤</button>
+        </form>
+
+    </div>
+    <!--
+    <div class="footer-bar">
+        Background photo © www.bigmike.ch — Licensed under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" class="credit-link">CC BY 4.0</a> 
+    </div>
+    -->
+    <div id="notification"></div>
+    
+</body>
+
+<script>
+    console.log("If you see this message, it means the JavaScript is working correctly on www.bigmike.ch!");
+
+    const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+    const host = window.location.host;
+    const socketUrl = protocol + host + "/ws";
+    const socket = new WebSocket(socketUrl);
+
+    const messageBox = document.getElementById("messageBox");
+    const form = document.querySelector("form.form-container");
+    const input = form.querySelector("input[name='message']");
+
+    // create empty id
+    let clientID = 0;
+
+    function getClientInfo() {
+        return JSON.stringify({
+            id: clientID,
+            type: "info",
+            content: {
+                // Screen info
+                width: window.screen.width,
+                height: window.screen.height,
+                availWidth: window.screen.availWidth,
+                availHeight: window.screen.availHeight,
+                pixelDepth: window.screen.pixelDepth,
+                colorDepth: window.screen.colorDepth,
+                devicePixelRatio: window.devicePixelRatio,
+
+                // Browser info
+                userAgent: navigator.userAgent,
+                platform: navigator.platform,
+                language: navigator.language,
+                languages: navigator.languages,
+                hardwareConcurrency: navigator.hardwareConcurrency || 'Unavailable',
+                deviceMemory: navigator.deviceMemory || 'Unavailable',
+
+                // Timezone info
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                offset: new Date().getTimezoneOffset(),
+
+                // Additional navigator info
+                online: navigator.onLine,
+                cookieEnabled: navigator.cookieEnabled,
+                doNotTrack: navigator.doNotTrack,
+
+                // Page info
+                pageUrl: window.location.href,
+                referrer: document.referrer,
+                pageTitle: document.title,
+
+                // Viewport info
+                innerWidth: window.innerWidth,
+                innerHeight: window.innerHeight,
+                clientWidth: document.documentElement.clientWidth,
+                clientHeight: document.documentElement.clientHeight,
+
+                // Touch support
+                ontouchstart: 'ontouchstart' in window,
+                maxTouchPoints: navigator.maxTouchPoints || 0,
+
+                // Locale/date info
+                localeString: new Date().toLocaleString(),
+                fullDate: new Date().toString(),
+
+                // Features detection
+                webAssembly: typeof WebAssembly !== 'undefined',
+                sharedArrayBuffer: typeof SharedArrayBuffer !== 'undefined',
+                offscreenCanvas: typeof OffscreenCanvas !== 'undefined'
+                
+            }
+        });
+    }
+
+
+
+    // Helper to append a message to the message box
+    function appendMessage(msg, color = "white", type = "other") {
+        const div = document.createElement("div");
+        div.className = "message message-" + type;
+        div.textContent = msg;
+        div.style.color = color;
+        messageBox.appendChild(div);
+        messageBox.scrollTop = messageBox.scrollHeight; 
+    }
+    
+    window.addEventListener("DOMContentLoaded", function () {
+        messageBox.scrollTop = messageBox.scrollHeight; 
+    });
+
+    socket.addEventListener("open", function () {
+        console.log("WebSocket is open now.");
+    });
+
+
+    socket.addEventListener("message", function (event) {
+        try {
+            const message = JSON.parse(event.data); 
+
+            // the very first message should always be the client ID
+            if (clientID === 0 && message.type !== "id") {
+                if (message.type === "error") {
+                    showNotification(message.content);
+                } else {
+                    showNotification("Failed to receive client ID. Please reload the page.");
+                    socket.close();
+                }
+                return;
+            }
+            
+            switch (message.type){
+                case "id":
+                    clientID = parseInt(message.content);
+                    console.log("Client ID received:", clientID);
+                    socket.send(getClientInfo());
+                    break;
+                 case "message":
+                    if (message.id === clientID) {
+                        console.log("Message correctly sent !");
+                    } else {
+                        appendMessage(message.content, "white", "other");
+                    }
+                    break;
+                case "error":
+                    showNotification(message.content);
+                    break;
+                case "nbusers":
+                    const userCountDiv = document.getElementById("userCount");
+                    userCountDiv.textContent = `Connected users: ${message.content}`;
+                    break;
+
+                default:
+                    console.warn("Unknown message type received:", messageType);
+                    break;
+            }
+
+        } catch (e) {
+            console.error("Failed to parse message:", event.data, e);
+            if (clientID === 0) {
+                showNotification("Failed to receive client ID. Please reload the page.");
+                socket.close();
+            } 
+        }
+    });
+
+    socket.addEventListener("error", function (event) {
+        console.error("WebSocket error:", event);
+        const userCountDiv = document.getElementById("userCount");
+        userCountDiv.textContent = `You are offline`;
+    });
+
+    socket.addEventListener("close", function () {
+        console.log("WebSocket is closed now.");
+        const userCountDiv = document.getElementById("userCount");
+        userCountDiv.textContent = `You are offline`;
+    });
+
+    function showNotification(message, duration = 5000) {
+        const notif = document.getElementById('notification');
+        notif.textContent = message;
+        notif.classList.add('show');
+        setTimeout(() => {
+            notif.classList.remove('show');
+        }, duration);
+    }
+
+    form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        if (clientID == 0) {
+            showNotification("Client ID not received yet. Please wait or reload the page.");
+            return;
+        }
+
+        const msg = input.value;
+
+        // Check if the message is empty
+        if (msg.trim() === "") {
+            showNotification("Message cannot be empty.");
+            input.value = "";
+            input.focus();
+            return;
+        }
+
+        // trim to 200 characters
+        if (msg.length > 200) {
+            msg = msg.slice(0, 200);
+        }
+
+        if (socket.readyState === WebSocket.OPEN) {
+            if (msg.startsWith("/")) {
+                // take the first word and remove the leading slash
+                const localCommand = msg.slice(1).trim().split(" ")[0].toLowerCase();
+
+                switch (localCommand) {
+                    case "clear":
+                        messageBox.innerHTML = "";
+                        break;
+                    case "info":
+                        const info = getClientInfo();
+                        appendMessage(info, "white", "local");
+                        break;
+                    case "help":
+                        const helpMessage = `Available commands:
+- /help: Show this help message.
+- /clear: Clear the message box.
+- /info: Show the client information.
+- /echo [message]: echo a message
+`;
+                        appendMessage(helpMessage, "white", "local");
+                        break;
+                    case "echo":
+                        const logMessage = msg.slice(5).trim();
+                        if (logMessage) {
+                            console.log("echo message:", logMessage);
+                            appendMessage(logMessage, "white", "local");
+                        } else {
+                            showNotification("Usage: /echo [message]", 1500);
+                        }
+                        break;
+                    default:
+                        showNotification(`Unknown command: ${localCommand}. Type /help for available commands.`,1500);
+                        break;
+                }
+                // Send the local command to the server
+                socket.send(JSON.stringify({ id: clientID, type: "local", content: msg }));
+                input.value = "";
+                input.focus();
+            } else {
+                // Send the message to the server
+                appendMessage(msg, "white", "self");
+                socket.send(JSON.stringify({ id: clientID, type: "message", content: msg }));
+                input.value = "";
+                input.focus();
+            }
+        } else {
+            showNotification("WebSocket is closed. Please reload the page or try again later.");
+        }                    
+    });
+
+</script>
+</html>
