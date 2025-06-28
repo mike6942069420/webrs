@@ -3,11 +3,13 @@ use sailfish::TemplateSimple;
 
 #[derive(TemplateSimple)]
 #[template(path = "index.html")]
-struct Template {
-    nbusers: u32,
+pub struct Template<'a> {
+    pub nbusers: u32,
+    pub nonce: &'a str,
+    pub messages: Vec<String>
 }
 
-pub fn render(nbusers: u32) -> Result<String, RenderError> {
-    let template = Template { nbusers };
+#[inline(always)]
+pub fn render(template: Template) -> Result<String, RenderError> {
     template.render_once()
 }

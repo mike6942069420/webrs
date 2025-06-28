@@ -27,6 +27,10 @@
 
         <div class="message-box" id="messageBox">
 
+            <% for msg in messages { %>
+                <div class="message message-other" ><%= msg %></div>
+            <% } %>
+
         </div>
 
         <form class="form-container">
@@ -44,7 +48,7 @@
     
 </body>
 
-<script>
+<script nonce="<%= nonce %>">
     console.log("If you see this message, it means the JavaScript is working correctly on www.bigmike.ch!");
 
     const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
@@ -140,6 +144,8 @@
 
 
     socket.addEventListener("message", function (event) {
+        // print the raw message
+        console.log("Message received:", event.data);
         try {
             const message = JSON.parse(event.data); 
 
@@ -212,10 +218,10 @@
 
     form.addEventListener("submit", function (e) {
         e.preventDefault();
-        if (clientID == 0) {
-            showNotification("Client ID not received yet. Please wait or reload the page.");
-            return;
-        }
+        //if (clientID == 0) {
+        //    showNotification("Client ID not received yet. Please wait or reload the page.");
+        //    return;
+        //}
 
         const msg = input.value;
 

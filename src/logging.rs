@@ -11,7 +11,11 @@ pub fn init_logging() -> tracing_appender::non_blocking::WorkerGuard {
 
     let (non_blocking, guard) = non_blocking(file);
 
-    fmt().with_writer(non_blocking).with_ansi(false).init();
+    fmt()
+        .with_writer(non_blocking)
+        .with_ansi(false)
+        .with_target(false)
+        .init();
 
     guard
 }

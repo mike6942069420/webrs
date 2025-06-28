@@ -11,6 +11,7 @@ release_run: build
 
 clean:
 	cargo clean
+	rm data/*
 
 run:
 	cargo run
@@ -18,6 +19,9 @@ run:
 format:
 	cargo clippy
 	cargo fmt
+
+format_fix: format
+	cargo clippy --fix --bin "webrs" --allow-dirty
 
 test:
 	ab -n 100000 -c 1000 http://localhost:8080/
