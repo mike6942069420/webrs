@@ -1,10 +1,11 @@
-use crate::body::HttpBody;
+//use crate::body::HttpBody;
 use crate::crypt;
-use crate::template;
 use crate::db;
+use crate::template;
 use crate::ws;
 
-use http_body_util::{Empty, Full};
+use bytes::Bytes;
+use http_body_util::Full;
 use hyper::{Method, StatusCode};
 use hyper::{Request, Response};
 use std::net::IpAddr;
@@ -19,13 +20,13 @@ const F_BG: &[u8] = include_bytes!("../templates/images/bg.webp");
 
 macro_rules! empty {
     () => {
-        HttpBody::Empty(Empty::new())
+        Full::new(Bytes::new())
     };
 }
 
 macro_rules! full {
     ($chunk:expr) => {
-        HttpBody::Full(Full::new($chunk.into()))
+        Full::new(Bytes::from($chunk))
     };
 }
 
@@ -53,7 +54,7 @@ macro_rules! dump_headers {
 
 pub async fn handle_request(
     mut req: Request<hyper::body::Incoming>,
-) -> Result<Response<HttpBody>, hyper::Error> {
+) -> Result<Response<Full<Bytes>>, hyper::Error> {
     let headers: &hyper::HeaderMap = req.headers();
 
     let cf_ip_opt = headers
@@ -121,14 +122,17 @@ pub async fn handle_request(
 
     match (req.method(), req.uri().path()) {
         (&Method::GET, "/") => {
-
             let nonce = crypt::generate_nonce_base64(32);
-            let messages: Vec<String> = db::get_messages().await.into_iter().map(|m| m.content).collect();
+            let messages: Vec<String> = db::get_messages()
+                .await
+                .into_iter()
+                .map(|m| m.content)
+                .collect();
 
             match template::render(template::Template {
                 nbusers: 42,
                 nonce: &nonce,
-                messages : messages,
+                messages,
             }) {
                 Ok(body) => Ok(response_builder
                     .header("Content-Security-Policy", format!(
@@ -144,31 +148,25 @@ pub async fn handle_request(
         }
 
         (&Method::GET, "/ws") => {
-           
-               if hyper_tungstenite::is_upgrade_request(&req) {
-                    let (response, websocket) = hyper_tungstenite::upgrade(&mut req, None).unwrap();
-                    tokio::spawn(async move {
-                        if let Err(e) = ws::handle_websocket(websocket).await {
-                            error!("[{}] WebSocket error: {}", cf_ip, e);
-                        }
-                    });
-                    // convert the response to a Response<HttpBody>
-                    let (parts, body) = response.into_parts();
-                    Ok(Response::from_parts(
-                        parts, HttpBody::Full(body))
+            if hyper_tungstenite::is_upgrade_request(&req) {
+                let (response, websocket) = hyper_tungstenite::upgrade(&mut req, None).unwrap();
+                tokio::spawn(async move {
+                    if let Err(e) = ws::handle_websocket(websocket).await {
+                        error!("[{}] WebSocket error: {}", cf_ip, e);
+                    }
+                });
+                Ok(response)
+            } else {
+                err!(
+                    StatusCode::BAD_REQUEST,
+                    format!(
+                        "[{}] Bad Request: Not a WebSocket upgrade request: {}",
+                        cf_ip,
+                        dump_headers!(headers)
                     )
-                } else {
-                    err!(
-                        StatusCode::BAD_REQUEST,
-                        format!(
-                            "[{}] Bad Request: Not a WebSocket upgrade request: {}",
-                            cf_ip,
-                            dump_headers!(headers)
-                        )
-                    )
-                }
-
-        },
+                )
+            }
+        }
 
         (&Method::GET, "/favicon.ico") => Ok(response_builder
             .header("Cache-Control", "public, max-age=86400")

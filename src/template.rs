@@ -6,7 +6,7 @@ use sailfish::TemplateSimple;
 pub struct Template<'a> {
     pub nbusers: u32,
     pub nonce: &'a str,
-    pub messages: Vec<String>
+    pub messages: Vec<String>,
 }
 
 #[inline(always)]
