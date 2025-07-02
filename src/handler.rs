@@ -1,4 +1,3 @@
-//use crate::body::HttpBody;
 use crate::crypt;
 use crate::db;
 use crate::template;
