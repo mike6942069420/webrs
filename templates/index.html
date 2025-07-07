@@ -49,245 +49,241 @@
 </body>
 
 <script nonce="<%= nonce %>">
-    console.log("If you see this message, it means the JavaScript is working correctly on www.bigmike.ch!");
+console.log("If you see this message, it means the JavaScript is working correctly on www.bigmike.ch!");
 
-    const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
-    const host = window.location.host;
-    const socketUrl = protocol + host + "/ws";
-    const socket = new WebSocket(socketUrl);
+const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+const host = window.location.host;
+const socketUrl = protocol + host + "/ws";
+const socket = new WebSocket(socketUrl);
 
-    const messageBox = document.getElementById("messageBox");
-    const form = document.querySelector("form.form-container");
-    const input = form.querySelector("input[name='message']");
+const messageBox = document.getElementById("messageBox");
+const form = document.querySelector("form.form-container");
+const input = form.querySelector("input[name='message']");
 
-    // create empty id
-    let clientID = 0;
+let clientID = 0;
 
-    function getClientInfo() {
-        return JSON.stringify({
-            id: clientID,
-            type: "info",
-            content: {
-                // Screen info
-                width: window.screen.width,
-                height: window.screen.height,
-                availWidth: window.screen.availWidth,
-                availHeight: window.screen.availHeight,
-                pixelDepth: window.screen.pixelDepth,
-                colorDepth: window.screen.colorDepth,
-                devicePixelRatio: window.devicePixelRatio,
+// Helper: encode object to binary JSON
+function encodeBinaryJson(obj) {
+    return new TextEncoder().encode(JSON.stringify(obj));
+}
 
-                // Browser info
-                userAgent: navigator.userAgent,
-                platform: navigator.platform,
-                language: navigator.language,
-                languages: navigator.languages,
-                hardwareConcurrency: navigator.hardwareConcurrency || 'Unavailable',
-                deviceMemory: navigator.deviceMemory || 'Unavailable',
-
-                // Timezone info
-                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                offset: new Date().getTimezoneOffset(),
-
-                // Additional navigator info
-                online: navigator.onLine,
-                cookieEnabled: navigator.cookieEnabled,
-                doNotTrack: navigator.doNotTrack,
-
-                // Page info
-                pageUrl: window.location.href,
-                referrer: document.referrer,
-                pageTitle: document.title,
-
-                // Viewport info
-                innerWidth: window.innerWidth,
-                innerHeight: window.innerHeight,
-                clientWidth: document.documentElement.clientWidth,
-                clientHeight: document.documentElement.clientHeight,
-
-                // Touch support
-                ontouchstart: 'ontouchstart' in window,
-                maxTouchPoints: navigator.maxTouchPoints || 0,
-
-                // Locale/date info
-                localeString: new Date().toLocaleString(),
-                fullDate: new Date().toString(),
-
-                // Features detection
-                webAssembly: typeof WebAssembly !== 'undefined',
-                sharedArrayBuffer: typeof SharedArrayBuffer !== 'undefined',
-                offscreenCanvas: typeof OffscreenCanvas !== 'undefined'
-                
-            }
-        });
+// Helper: decode binary JSON to object
+async function decodeBinaryJson(data) {
+    if (data instanceof Blob) {
+        const buffer = await data.arrayBuffer();
+        const text = new TextDecoder().decode(buffer);
+        return JSON.parse(text);
+    } else if (typeof data === "string") {
+        // fallback, in case server sends text frames
+        return JSON.parse(data);
+    } else {
+        throw new Error("Unknown data type received");
     }
+}
 
+function getClientInfo() {
+    return {
+        id: clientID,
+        type: "info",
+        content: {
+            width: window.screen.width,
+            height: window.screen.height,
+            availWidth: window.screen.availWidth,
+            availHeight: window.screen.availHeight,
+            pixelDepth: window.screen.pixelDepth,
+            colorDepth: window.screen.colorDepth,
+            devicePixelRatio: window.devicePixelRatio,
 
+            userAgent: navigator.userAgent,
+            platform: navigator.platform,
+            language: navigator.language,
+            languages: navigator.languages,
+            hardwareConcurrency: navigator.hardwareConcurrency || 'Unavailable',
+            deviceMemory: navigator.deviceMemory || 'Unavailable',
 
-    // Helper to append a message to the message box
-    function appendMessage(msg, color = "white", type = "other") {
-        const div = document.createElement("div");
-        div.className = "message message-" + type;
-        div.textContent = msg;
-        div.style.color = color;
-        messageBox.appendChild(div);
-        messageBox.scrollTop = messageBox.scrollHeight; 
-    }
-    
-    window.addEventListener("DOMContentLoaded", function () {
-        messageBox.scrollTop = messageBox.scrollHeight; 
-    });
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            offset: new Date().getTimezoneOffset(),
 
-    socket.addEventListener("open", function () {
-        console.log("WebSocket is open now.");
-    });
+            online: navigator.onLine,
+            cookieEnabled: navigator.cookieEnabled,
+            doNotTrack: navigator.doNotTrack,
 
+            pageUrl: window.location.href,
+            referrer: document.referrer,
+            pageTitle: document.title,
 
-    socket.addEventListener("message", function (event) {
-        // print the raw message
-        console.log("Message received:", event.data);
-        try {
-            const message = JSON.parse(event.data); 
+            innerWidth: window.innerWidth,
+            innerHeight: window.innerHeight,
+            clientWidth: document.documentElement.clientWidth,
+            clientHeight: document.documentElement.clientHeight,
 
-            // the very first message should always be the client ID
-            if (clientID === 0 && message.type !== "id") {
-                if (message.type === "error") {
-                    showNotification(message.content);
-                } else {
-                    showNotification("Failed to receive client ID. Please reload the page.");
-                    socket.close();
-                }
-                return;
-            }
-            
-            switch (message.type){
-                case "id":
-                    clientID = parseInt(message.content);
-                    console.log("Client ID received:", clientID);
-                    socket.send(getClientInfo());
-                    break;
-                 case "message":
-                    if (message.id === clientID) {
-                        console.log("Message correctly sent !");
-                    } else {
-                        appendMessage(message.content, "white", "other");
-                    }
-                    break;
-                case "error":
-                    showNotification(message.content);
-                    break;
-                case "nbusers":
-                    const userCountDiv = document.getElementById("userCount");
-                    userCountDiv.textContent = `Connected users: ${message.content}`;
-                    break;
+            ontouchstart: 'ontouchstart' in window,
+            maxTouchPoints: navigator.maxTouchPoints || 0,
 
-                default:
-                    console.warn("Unknown message type received:", messageType);
-                    break;
-            }
+            localeString: new Date().toLocaleString(),
+            fullDate: new Date().toString(),
 
-        } catch (e) {
-            console.error("Failed to parse message:", event.data, e);
-            if (clientID === 0) {
+            webAssembly: typeof WebAssembly !== 'undefined',
+            sharedArrayBuffer: typeof SharedArrayBuffer !== 'undefined',
+            offscreenCanvas: typeof OffscreenCanvas !== 'undefined'
+        }
+    };
+}
+
+// Append message helper
+function appendMessage(msg, color = "white", type = "other") {
+    const div = document.createElement("div");
+    div.className = "message message-" + type;
+    div.textContent = msg;
+    div.style.color = color;
+    messageBox.appendChild(div);
+    messageBox.scrollTop = messageBox.scrollHeight;
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+    messageBox.scrollTop = messageBox.scrollHeight;
+});
+
+socket.addEventListener("open", () => {
+    console.log("WebSocket is open now.");
+});
+
+socket.addEventListener("message", async (event) => {
+    try {
+        const message = await decodeBinaryJson(event.data);
+
+        if (clientID === 0 && message.type !== "id") {
+            if (message.type === "error") {
+                showNotification(message.content);
+            } else {
                 showNotification("Failed to receive client ID. Please reload the page.");
                 socket.close();
-            } 
-        }
-    });
-
-    socket.addEventListener("error", function (event) {
-        console.error("WebSocket error:", event);
-        const userCountDiv = document.getElementById("userCount");
-        userCountDiv.textContent = `You are offline`;
-    });
-
-    socket.addEventListener("close", function () {
-        console.log("WebSocket is closed now.");
-        const userCountDiv = document.getElementById("userCount");
-        userCountDiv.textContent = `You are offline`;
-    });
-
-    function showNotification(message, duration = 5000) {
-        const notif = document.getElementById('notification');
-        notif.textContent = message;
-        notif.classList.add('show');
-        setTimeout(() => {
-            notif.classList.remove('show');
-        }, duration);
-    }
-
-    form.addEventListener("submit", function (e) {
-        e.preventDefault();
-        //if (clientID == 0) {
-        //    showNotification("Client ID not received yet. Please wait or reload the page.");
-        //    return;
-        //}
-
-        const msg = input.value;
-
-        // Check if the message is empty
-        if (msg.trim() === "") {
-            showNotification("Message cannot be empty.");
-            input.value = "";
-            input.focus();
+            }
             return;
         }
 
-        // trim to 200 characters
-        if (msg.length > 200) {
-            msg = msg.slice(0, 200);
+        switch (message.type) {
+            case "id":
+                clientID = parseInt(message.content);
+                console.log("Client ID received:", clientID);
+                socket.send(encodeBinaryJson(getClientInfo()));
+                break;
+
+            case "message":
+                if (message.id === clientID) {
+                    console.log("Message correctly sent!");
+                } else {
+                    appendMessage(message.content, "white", "other");
+                }
+                break;
+
+            case "error":
+                showNotification(message.content);
+                break;
+
+            case "nbusers":
+                const userCountDiv = document.getElementById("userCount");
+                userCountDiv.textContent = `Connected users: ${message.content}`;
+                break;
+
+            default:
+                console.warn("Unknown message type received:", message.type);
+                break;
         }
+    } catch (e) {
+        console.error("Failed to parse message:", event.data, e);
+        if (clientID === 0) {
+            showNotification("Failed to receive client ID. Please reload the page.");
+            socket.close();
+        }
+    }
+});
 
-        if (socket.readyState === WebSocket.OPEN) {
-            if (msg.startsWith("/")) {
-                // take the first word and remove the leading slash
-                const localCommand = msg.slice(1).trim().split(" ")[0].toLowerCase();
+socket.addEventListener("error", (event) => {
+    console.error("WebSocket error:", event);
+    const userCountDiv = document.getElementById("userCount");
+    userCountDiv.textContent = `You are offline`;
+});
 
-                switch (localCommand) {
-                    case "clear":
-                        messageBox.innerHTML = "";
-                        break;
-                    case "info":
-                        const info = getClientInfo();
-                        appendMessage(info, "white", "local");
-                        break;
-                    case "help":
-                        const helpMessage = `Available commands:
+socket.addEventListener("close", () => {
+    console.log("WebSocket is closed now.");
+    const userCountDiv = document.getElementById("userCount");
+    userCountDiv.textContent = `You are offline`;
+});
+
+function showNotification(message, duration = 5000) {
+    const notif = document.getElementById('notification');
+    notif.textContent = message;
+    notif.classList.add('show');
+    setTimeout(() => {
+        notif.classList.remove('show');
+    }, duration);
+}
+
+form.addEventListener("submit", (e) => {
+    e.preventDefault();
+
+    let msg = input.value;
+
+    if (msg.trim() === "") {
+        showNotification("Message cannot be empty.");
+        input.value = "";
+        input.focus();
+        return;
+    }
+
+    if (msg.length > 200) {
+        msg = msg.slice(0, 200);
+    }
+
+    if (socket.readyState === WebSocket.OPEN) {
+        if (msg.startsWith("/")) {
+            const localCommand = msg.slice(1).trim().split(" ")[0].toLowerCase();
+
+            switch (localCommand) {
+                case "clear":
+                    messageBox.innerHTML = "";
+                    break;
+                case "info":
+                    appendMessage(JSON.stringify(getClientInfo()), "white", "local");
+                    break;
+                case "help":
+                    const helpMessage = `Available commands:
 - /help: Show this help message.
 - /clear: Clear the message box.
 - /info: Show the client information.
 - /echo [message]: echo a message
 `;
-                        appendMessage(helpMessage, "white", "local");
-                        break;
-                    case "echo":
-                        const logMessage = msg.slice(5).trim();
-                        if (logMessage) {
-                            console.log("echo message:", logMessage);
-                            appendMessage(logMessage, "white", "local");
-                        } else {
-                            showNotification("Usage: /echo [message]", 1500);
-                        }
-                        break;
-                    default:
-                        showNotification(`Unknown command: ${localCommand}. Type /help for available commands.`,1500);
-                        break;
-                }
-                // Send the local command to the server
-                socket.send(JSON.stringify({ id: clientID, type: "local", content: msg }));
-                input.value = "";
-                input.focus();
-            } else {
-                // Send the message to the server
-                appendMessage(msg, "white", "self");
-                socket.send(JSON.stringify({ id: clientID, type: "message", content: msg }));
-                input.value = "";
-                input.focus();
+                    appendMessage(helpMessage, "white", "local");
+                    break;
+                case "echo":
+                    const logMessage = msg.slice(5).trim();
+                    if (logMessage) {
+                        console.log("echo message:", logMessage);
+                        appendMessage(logMessage, "white", "local");
+                    } else {
+                        showNotification("Usage: /echo [message]", 1500);
+                    }
+                    break;
+                default:
+                    showNotification(`Unknown command: ${localCommand}. Type /help for available commands.`, 1500);
+                    break;
             }
-        } else {
-            showNotification("WebSocket is closed. Please reload the page or try again later.");
-        }                    
-    });
 
+            // Send local command as binary JSON
+            socket.send(encodeBinaryJson({ id: clientID, type: "local", content: msg }));
+            input.value = "";
+            input.focus();
+        } else {
+            appendMessage(msg, "white", "self");
+            socket.send(encodeBinaryJson({ id: clientID, type: "message", content: msg }));
+            input.value = "";
+            input.focus();
+        }
+    } else {
+        showNotification("WebSocket is closed. Please reload the page or try again later.");
+    }
+});
 </script>
+
 </html>

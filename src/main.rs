@@ -1,3 +1,4 @@
+mod constants;
 mod crypt;
 mod db;
 mod handler;
@@ -25,7 +26,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     .await;
     let _guard = logging::init_logging();
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
+    let addr = SocketAddr::from(constants::MAIN_HOST);
     info!("Listening on http://{}", addr);
 
     // We create a TcpListener and bind it to 127.0.0.1:3000
@@ -38,6 +39,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
         tokio::task::spawn(async move {
             if let Err(err) = http1::Builder::new()
+                .keep_alive(true)
                 .serve_connection(io, service_fn(handler::handle_request))
                 .with_upgrades()
                 .await
