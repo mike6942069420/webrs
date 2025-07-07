@@ -223,6 +223,11 @@ function showNotification(message, duration = 5000) {
 form.addEventListener("submit", (e) => {
     e.preventDefault();
 
+    if (clientID == 0) {
+        showNotification("Client ID not received yet. Please wait or reload the page.");
+        return;
+    }
+
     let msg = input.value;
 
     if (msg.trim() === "") {

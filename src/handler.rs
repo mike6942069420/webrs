@@ -41,6 +41,7 @@ macro_rules! err {
 macro_rules! dump_headers {
     ($headers:expr) => {{
         let mut s = String::new();
+        s.push_str("Headers: || ");
         for (_, (k, v)) in $headers.iter().enumerate() {
             s.push_str(k.as_str());
             s.push_str(": ");
@@ -68,7 +69,7 @@ pub async fn handle_request(
                 return err!(
                     StatusCode::FORBIDDEN,
                     format!(
-                        "Invalid CF-Connecting-IP header: '{}': {}",
+                        "Invalid CF-Connecting-IP header: '{}' |x| {}",
                         ip_str,
                         dump_headers!(headers)
                     )
@@ -87,7 +88,7 @@ pub async fn handle_request(
             return err!(
                 StatusCode::FORBIDDEN,
                 format!(
-                    "Missing CF-Connecting-IP header: {}",
+                    "Missing CF-Connecting-IP header |x| {}",
                     dump_headers!(headers)
                 )
             );
@@ -129,7 +130,7 @@ pub async fn handle_request(
                 .collect();
 
             match template::render(template::Template {
-                nbusers: 42,
+                nbusers: ws::get_user_count().await,
                 nonce: &nonce,
                 messages,
             }) {
@@ -141,7 +142,7 @@ pub async fn handle_request(
                     .header("Content-Type", "text/html; charset=utf-8")
                     .body(full!(body)).unwrap()),
                 Err(e) => {
-                    err!(StatusCode::INTERNAL_SERVER_ERROR, format!("[{cf_ip}] Internal Server Error: {e}"))
+                    err!(StatusCode::INTERNAL_SERVER_ERROR, format!("[{cf_ip}] Internal Server Error |x| {e}"))
                 }
             }
         }
@@ -159,7 +160,7 @@ pub async fn handle_request(
                 err!(
                     StatusCode::BAD_REQUEST,
                     format!(
-                        "[{}] Bad Request: Not a WebSocket upgrade request: {}",
+                        "[{}] Bad Request: Not a WebSocket upgrade request |x| {}",
                         cf_ip,
                         dump_headers!(headers)
                     )
@@ -201,7 +202,7 @@ pub async fn handle_request(
         _ => err!(
             StatusCode::NOT_FOUND,
             format!(
-                "[{}] 404 Not Found: {} {}",
+                "[{}] 404 Not Found |x| {} {}",
                 cf_ip,
                 req.method(),
                 req.uri().path()

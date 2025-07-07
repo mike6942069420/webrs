@@ -4,7 +4,7 @@ use sailfish::TemplateSimple;
 #[derive(TemplateSimple)]
 #[template(path = "index.html")]
 pub struct Template<'a> {
-    pub nbusers: u32,
+    pub nbusers: usize,
     pub nonce: &'a str,
     pub messages: Vec<String>,
 }
