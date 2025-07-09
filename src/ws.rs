@@ -5,6 +5,7 @@ use hyper_tungstenite::HyperWebsocket;
 use hyper_tungstenite::tungstenite::{self, Message};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -14,13 +15,14 @@ use tokio::{
     sync::Mutex,
     time::{self, Duration},
 };
+use tokio_tungstenite::tungstenite::Utf8Bytes;
 use tracing::{error, info};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct JsonMessage {
-    ty: String, // "id" "error" "local" "message" "nbusers"
-    id: usize,  // id of the messages sender
-    co: String, // content of the message
+    r#type: String, // "id" "error" "local" "message" "nbusers"
+    id: usize,      // id of the messages sender
+    content: Value, // content of the message
 }
 
 type UserId = usize;
@@ -31,15 +33,30 @@ static GLOBAL_HUB: Lazy<Arc<RwLock<HashMap<UserId, Tx>>>> =
 
 static GLOBAL_ID: Lazy<AtomicUsize> = Lazy::new(|| AtomicUsize::new(1));
 
+macro_rules! send_message {
+    ($ws_sink:expr, $msg:expr) => {
+        let _ = $ws_sink.lock().await.send($msg).await.map_err(|e| {
+            error!("Failed to send message: {e}");
+            e
+        })?;
+    };
+}
+
+fn to_bytes(msg: &JsonMessage) -> Message {
+    let json_string = serde_json::to_string(msg).expect("Failed to serialize message");
+    let bytes = Utf8Bytes::from(json_string);
+    Message::Text(bytes)
+}
+
 async fn broadcast_to_all(msg: Message) {
     let hub = GLOBAL_HUB.read().await;
     for (_user_id, tx) in hub.iter() {
         // try_send(msg.clone()) or send(msg.clone()).await are to options (first is fail fast, second is blocking)
-        // may want to avoid .clone() if messages are large => Use Arc::new(msg) and Arc::clone(&msg) instead
+        // INFO: may want to avoid .clone() if messages are large => Use Arc::new(msg) and Arc::clone(&msg) instead
         if let Err(e) = tx.try_send(msg.clone()) {
             match e {
                 tokio::sync::mpsc::error::TrySendError::Full(_) => {
-                    // User's queue is full — drop message
+                    // TODO: send disconnect message to user
                 }
                 tokio::sync::mpsc::error::TrySendError::Closed(_) => {
                     // User has disconnected — remove from hub
@@ -54,9 +71,26 @@ pub async fn get_user_count() -> usize {
     hub.len()
 }
 
-// May combine forward_task and ping_task into a single task to reduce lock contention
+// INFO: May combine forward_task and ping_task into a single task to reduce lock contention
 pub async fn handle_websocket(websocket: HyperWebsocket) -> Result<(), tungstenite::Error> {
-    let websocket = websocket.await?;
+    let mut websocket = websocket.await?;
+
+    // max user count check
+    if get_user_count().await >= constants::WS_MAX_USERS {
+        error!("Maximum number of users reached: {}", constants::WS_MAX_USERS);
+        // send error message to user
+        let error_message = to_bytes(&JsonMessage {
+            r#type: "error".to_string(),
+            id: 0,
+            content: format!(
+                "Maximum number of users reached: {}",
+                constants::WS_MAX_USERS
+            )
+            .into(),
+        });
+        websocket.send(error_message).await?;
+        return Ok(());
+    }
 
     let (ws_sink, mut ws_stream) = websocket.split(); // Split into sink and stream
     let (tx, mut rx) = tokio::sync::mpsc::channel::<Message>(constants::WS_BUFF_MESSAGES); // SEND main loop --> forward_task
@@ -93,7 +127,6 @@ pub async fn handle_websocket(websocket: HyperWebsocket) -> Result<(), tungsteni
                     }
                 }
                 _ = shutdown_rx_fwd.changed() => break
-
             }
         }
         let mut hub = GLOBAL_HUB.write().await;
@@ -123,16 +156,21 @@ pub async fn handle_websocket(websocket: HyperWebsocket) -> Result<(), tungsteni
         }
     });
 
-    // TODO: send initial id message to user
-    //let initial_message = JsonMessage {
-    //    ty: "id".to_string(),
-    //    id: 0,
-    //    co: user_id.to_string(),
-    //};    //if let Err(e) = ws_sink.lock().await.send(Message::Text(serde_json::to_string(&initial_message).unwrap())).await {
-    //    error!("Failed to send initial message to user {}: {e}", user_id);
-    //    return Err(e);
-    //}
-    // TODO: send the Nbusers message to the client
+    // Send initial id message to user
+    let initial_message = to_bytes(&JsonMessage {
+        r#type: "id".to_string(),
+        id: 0,
+        content: user_id.to_string().into(),
+    });
+    send_message!(ws_sink, initial_message);
+
+    // send initial user count
+    let user_count_message = to_bytes(&JsonMessage {
+        r#type: "nbusers".to_string(),
+        id: 0,
+        content: get_user_count().await.to_string().into(),
+    });
+    broadcast_to_all(user_count_message).await;
 
     // main loop
     // receives messages from the WebSocket stream
@@ -143,14 +181,49 @@ pub async fn handle_websocket(websocket: HyperWebsocket) -> Result<(), tungsteni
         }
 
         match message? {
-            Message::Binary(msg) => {
+            Message::Text(msg) => {
                 #[cfg(debug_assertions)]
                 info!("Received binary message: {:?}", msg);
 
-                broadcast_to_all(Message::Binary(msg)).await;
+                // if the message type is message, broadcast it to all users
+                if let Ok(json_msg) = serde_json::from_str::<JsonMessage>(&msg) {
+                    match json_msg.r#type.as_str() {
+                        "message" => {
+                            // Broadcast message to all users
+                            broadcast_to_all(Message::Text(msg)).await;
+                        }
+                        "local" => {
+                            // Send local message to the user
+                            let local_message = to_bytes(&JsonMessage {
+                                r#type: "message".to_string(),
+                                id: user_id,
+                                content: json_msg.content,
+                            });
+                            send_message!(ws_sink, local_message);
+                        }
+                        "error" => {
+                            // Send error message to the user
+                            error!("Error message from user {}: {}", user_id, json_msg.content);
+                            break;
+                        }
+
+                        "info" => {
+                            info!("Info message from user {}: {}", user_id, json_msg.content);
+                        }
+
+                        _ => {
+                            error!("Unknown message type: {}", json_msg.r#type);
+                            break;
+                        }
+                    }
+                } else {
+                    error!("Failed to deserialize binary message: {:?}", msg);
+                    break;
+                }
             }
 
             Message::Close(msg) => {
+                #[cfg(debug_assertions)]
                 if let Some(msg) = &msg {
                     println!(
                         "Received close message with code {} and message: {}",
@@ -159,8 +232,10 @@ pub async fn handle_websocket(websocket: HyperWebsocket) -> Result<(), tungsteni
                 } else {
                     println!("Received close message");
                 }
+
                 break;
             }
+
             _ => {}
         }
     }
@@ -170,6 +245,15 @@ pub async fn handle_websocket(websocket: HyperWebsocket) -> Result<(), tungsteni
     let _ = ping_task.await;
     let _ = forward_task.await;
 
+    let user_count_message = to_bytes(&JsonMessage {
+        r#type: "nbusers".to_string(),
+        id: 0,
+        content: get_user_count().await.to_string().into(),
+    });
+    broadcast_to_all(user_count_message).await;
+
+    #[cfg(debug_assertions)]
     println!("WebSocket connection closed cleanly");
+
     Ok(())
 }

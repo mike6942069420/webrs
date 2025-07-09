@@ -62,24 +62,18 @@ const input = form.querySelector("input[name='message']");
 
 let clientID = 0;
 
-// Helper: encode object to binary JSON
-function encodeBinaryJson(obj) {
-    return new TextEncoder().encode(JSON.stringify(obj));
+function exit() {
+    if (socket.readyState === WebSocket.OPEN) {
+        socket.close();
+    }
+    console.log("Exiting the webSocket connection.");
 }
 
-// Helper: decode binary JSON to object
-async function decodeBinaryJson(data) {
-    if (data instanceof Blob) {
-        const buffer = await data.arrayBuffer();
-        const text = new TextDecoder().decode(buffer);
-        return JSON.parse(text);
-    } else if (typeof data === "string") {
-        // fallback, in case server sends text frames
-        return JSON.parse(data);
-    } else {
-        throw new Error("Unknown data type received");
-    }
+function start() {
+    // reload the page to reset the client ID
+    window.location.reload();
 }
+
 
 function getClientInfo() {
     return {
@@ -150,8 +144,10 @@ socket.addEventListener("open", () => {
 
 socket.addEventListener("message", async (event) => {
     try {
-        const message = await decodeBinaryJson(event.data);
-
+        const message = await JSON.parse(event.data);
+        
+        //console.log("Message received:", message);
+        
         if (clientID === 0 && message.type !== "id") {
             if (message.type === "error") {
                 showNotification(message.content);
@@ -166,7 +162,7 @@ socket.addEventListener("message", async (event) => {
             case "id":
                 clientID = parseInt(message.content);
                 console.log("Client ID received:", clientID);
-                socket.send(encodeBinaryJson(getClientInfo()));
+                socket.send(JSON.stringify(getClientInfo()));
                 break;
 
             case "message":
@@ -276,12 +272,12 @@ form.addEventListener("submit", (e) => {
             }
 
             // Send local command as binary JSON
-            socket.send(encodeBinaryJson({ id: clientID, type: "local", content: msg }));
+            socket.send(JSON.stringify({ id: clientID, type: "local", content: msg }));
             input.value = "";
             input.focus();
         } else {
             appendMessage(msg, "white", "self");
-            socket.send(encodeBinaryJson({ id: clientID, type: "message", content: msg }));
+            socket.send(JSON.stringify({ id: clientID, type: "message", content: msg }));
             input.value = "";
             input.focus();
         }
