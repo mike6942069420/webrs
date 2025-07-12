@@ -11,11 +11,11 @@ use std::net::IpAddr;
 
 use tracing::{error, info};
 
-const F_FAVICON: &[u8] = include_bytes!("../templates/favicon.ico");
-const F_SITEMAP: &[u8] = include_bytes!("../templates/sitemap.xml");
-const F_ROBOTS: &[u8] = include_bytes!("../templates/robots.txt");
-const F_STYLES: &[u8] = include_bytes!("../templates/styles.css");
-const F_BG: &[u8] = include_bytes!("../templates/images/bg.webp");
+static F_FAVICON: &[u8] = include_bytes!("../templates/favicon.ico");
+static F_SITEMAP: &[u8] = include_bytes!("../templates/sitemap.xml");
+static F_ROBOTS: &[u8] = include_bytes!("../templates/robots.txt");
+static F_STYLES: &[u8] = include_bytes!("../templates/styles.css");
+static F_BG: &[u8] = include_bytes!("../templates/images/bg.webp");
 
 macro_rules! empty {
     () => {
@@ -42,7 +42,7 @@ macro_rules! dump_headers {
     ($headers:expr) => {{
         let mut s = String::new();
         s.push_str("Headers: || ");
-        for (_, (k, v)) in $headers.iter().enumerate() {
+        for (k, v) in $headers.iter() {
             s.push_str(k.as_str());
             s.push_str(": ");
             s.push_str(v.to_str().unwrap_or(""));
@@ -95,19 +95,18 @@ pub async fn handle_request(
         }
     };
 
-    // log the request: ip, method, path UA
-    info!(
-        "[{}] {} {} {}",
-        cf_ip,
-        req.method(),
-        req.uri().path(),
-        headers
-            .get("User-Agent")
-            .and_then(|v| v.to_str().ok())
-            .unwrap_or("Unknown User-Agent")
-    );
+    let method = req.method();
+    let path = req.uri().path();
+    let ua = headers
+        .get("User-Agent")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("Unknown User-Agent");
+
+    // log the request: ip, method, path, UA
+    info!("[{}] {} {} {}", cf_ip, method, path, ua);
 
     let response_builder = Response::builder()
+        // TODO, why does it not work ? .header("Content-Security-Policy", "default-src 'none'; img-src 'self'")
         .header("X-Permitted-Cross-Domain-Policies", "none")
         .header("X-Content-Type-Options", "nosniff")
         .header("X-Frame-Options", "DENY")
@@ -120,19 +119,20 @@ pub async fn handle_request(
         .header("Cross-Origin-Opener-Policy", "same-origin")
         .header("Cross-Origin-Embedder-Policy", "require-corp");
 
-    match (req.method(), req.uri().path()) {
+    match (method, path) {
         (&Method::GET, "/") => {
             let nonce = crypt::generate_nonce_base64(32);
+            let nb_users = ws::get_user_count();
             let messages: Vec<String> = db::get_messages()
                 .await
                 .into_iter()
                 .map(|m| m.content)
-                .collect();
+                .collect(); //may need to optimise
 
             match template::render(template::Template {
-                nbusers: ws::get_user_count().await,
-                nonce: &nonce,
-                messages,
+                nbusers:    &nb_users,
+                nonce:      &nonce,
+                messages:   &messages,
             }) {
                 Ok(body) => Ok(response_builder
                     .header("Content-Security-Policy", format!(
@@ -151,7 +151,7 @@ pub async fn handle_request(
             if hyper_tungstenite::is_upgrade_request(&req) {
                 let (response, websocket) = hyper_tungstenite::upgrade(&mut req, None).unwrap();
                 tokio::spawn(async move {
-                    if let Err(e) = ws::handle_websocket(websocket).await {
+                    if let Err(e) = ws::handle_websocket(websocket, cf_ip).await {
                         error!("[{}] WebSocket error: {}", cf_ip, e);
                     }
                 });
@@ -201,12 +201,7 @@ pub async fn handle_request(
         // Return 404 Not Found for other routes.
         _ => err!(
             StatusCode::NOT_FOUND,
-            format!(
-                "[{}] 404 Not Found |x| {} {}",
-                cf_ip,
-                req.method(),
-                req.uri().path()
-            )
+            format!("[{}] 404 Not Found |x| {} {}", cf_ip, method, path)
         ),
     }
 }

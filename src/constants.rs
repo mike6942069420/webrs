@@ -8,6 +8,6 @@ pub const WS_PING_INTERVAL: u64 = 5; // Ping interval in seconds
 pub const WS_PING_INTERVAL: u64 = 60; // Ping interval in seconds
 
 #[cfg(debug_assertions)]
-pub const WS_MAX_USERS: usize = 2;   // Maximum number of users allowed in the WebSocket hub
+pub const WS_MAX_USERS: usize = 2; // Maximum number of users allowed in the WebSocket hub
 #[cfg(not(debug_assertions))]
 pub const WS_MAX_USERS: usize = 100; // Maximum number of users allowed in the WebSocket hub

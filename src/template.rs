@@ -4,9 +4,9 @@ use sailfish::TemplateSimple;
 #[derive(TemplateSimple)]
 #[template(path = "index.html")]
 pub struct Template<'a> {
-    pub nbusers: usize,
+    pub nbusers: &'a usize,
     pub nonce: &'a str,
-    pub messages: Vec<String>,
+    pub messages: &'a Vec<String>,
 }
 
 #[inline(always)]
