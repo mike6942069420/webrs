@@ -1,6 +1,5 @@
 use crate::crypt;
 use crate::db;
-use crate::template;
 use crate::ws;
 
 use bytes::Bytes;
@@ -79,10 +78,15 @@ pub async fn handle_request(
     } else {
         let ip = headers
             .get("X-Forwarded-For")
-            .and_then(|v| v.to_str().ok()).unwrap_or("").parse().unwrap_or(IpAddr::from([127, 0, 0, 1]));
-        warn!("[-------->] No CF-Connecting-IP header found, using X-Forwarded-For or defaulting to: {}", ip);
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("")
+            .parse()
+            .unwrap_or(IpAddr::from([127, 0, 0, 1]));
+        warn!(
+            "[-------->] No CF-Connecting-IP header found, using X-Forwarded-For or defaulting to: {}",
+            ip
+        );
         ip
-
     };
 
     let method = req.method();
@@ -113,13 +117,8 @@ pub async fn handle_request(
         (&Method::GET, "/") => {
             let nonce = crypt::generate_nonce_base64(32);
             let nb_users = ws::get_user_count();
-            let messages: Vec<String> = db::get_messages().await;
 
-            match template::render(template::Template {
-                nbusers:    &nb_users,
-                nonce:      &nonce,
-                messages:   &messages,
-            }) {
+            match db::render(&nb_users,&nonce).await {
                 Ok(body) => Ok(response_builder
                     .header("Content-Security-Policy", format!(
                         "default-src 'none'; script-src 'self' 'nonce-{nonce}'; style-src 'self'; img-src 'self'; connect-src 'self'"

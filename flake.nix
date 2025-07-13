@@ -14,11 +14,14 @@
         name = "dev-shell";
 
         buildInputs = with pkgs; [
+          # random ci/cd tools
           bashInteractive
-
           coreutils
           gnumake
           git
+          ssh
+          docker
+          scp
 
           # rust toolchain
           rustup
@@ -26,8 +29,7 @@
           # test
           apacheHttpd
 
-          # docker
-          docker
+
         ];
 
         # Setup environment to use musl target by default

@@ -9,7 +9,7 @@ Git repository containing the webserver written in rust and webpage for [www.big
 > 
 > Please see the `LICENSE` file for the full **(AGPLv3)** license terms.
 >
-> The background photo `bg.webp` included in this repository is licensed separately under  
+> The background photo `templates/images/bg.webp` included in this repository is licensed separately under  
 > **Creative Commons Attribution 4.0 International (CC BY 4.0)**.  
 > You are free to use and share the photo as long as you provide proper attribution.
 
@@ -29,3 +29,8 @@ Run `nix develop` to enter a shell with all required dependencies.
 | `make clean`    | Clean the build directory                                                                     |
 | `make format`   | Format the code using `cargo fmt` and `cargo clippy`                                          |
 | `make test`     | Run tests                                                                                     |
+| `make deploy`   | Build the Docker image, save it, and deploy it to the remote server using Docker Compose      |
+
+##### Docker
+The `Dockerfile` and `docker-compose.yml` files are a run environment for the webserver.\
+The build still happens locally but the docker container is here to test the production binary.

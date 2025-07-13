@@ -2,8 +2,7 @@ mod constants;
 mod crypt;
 mod db;
 mod handler;
-mod logging;
-mod template;
+mod log;
 mod ws;
 
 use std::net::SocketAddr;
@@ -21,7 +20,8 @@ use tracing::{error, info};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("Starting server...");
-    let _guard = logging::init_logging();
+    let _guard = log::init_logging();
+    db::initialize().await;
 
     let addr = SocketAddr::from(constants::MAIN_HOST);
     let listener = TcpListener::bind(addr).await?;
@@ -29,7 +29,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let mut sigint = signal(SignalKind::interrupt())?;
     let mut sigterm = signal(SignalKind::terminate())?;
 
-    info!("======================================================== Listening on http://{} ========================================================", addr);
+    info!(
+        "======================================================== Listening on http://{} ========================================================",
+        addr
+    );
     println!("Listening on http://{addr}");
 
     loop {

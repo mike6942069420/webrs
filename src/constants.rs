@@ -1,4 +1,6 @@
 pub const LOG_FILE: &str = "data/log.txt";
+pub const DB_FILE: &str = "data/db.txt";
+pub const DB_WRITE_INTERVAL: u64 = 1; // seconds
 
 pub const MAIN_HOST: ([u8; 4], u16) = if cfg!(debug_assertions) {
     ([127, 0, 0, 1], 8080)

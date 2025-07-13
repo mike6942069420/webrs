@@ -113,7 +113,6 @@ pub async fn handle_websocket(
 
     // Generate a unique user ID
     let user_id = GLOBAL_ID.fetch_add(1, Ordering::Relaxed); // TODO: handle overflow
-    info!("    [{}] WS [{}]: New user connected", ip, user_id);
 
     // Register the user in the global hub
     GLOBAL_HUB.insert(user_id, tx);
@@ -171,19 +170,29 @@ pub async fn handle_websocket(
     });
     send_message!(ws_sink, initial_message, ip);
 
+    let nb_users = get_user_count();
+
     // send initial user count
     let user_count_message = to_bytes(&JsonMessage {
         r#type: "nbusers".to_string(),
         id: 0,
-        content: get_user_count().to_string().into(),
+        content: nb_users.to_string().into(),
     });
     let _ = broadcast_to_all(user_count_message); // TODO: handle error
+
+    info!(
+        "    [{}] WS [{}]: New user connected, {} users",
+        ip, user_id, nb_users
+    );
 
     // main loop
     // receives messages from the WebSocket stream
     while let Some(message) = ws_stream.next().await {
         if let Err(e) = &message {
-            error!("    [{}] WS [{}]: Error receiving message: {}", ip, user_id, e);
+            error!(
+                "    [{}] WS [{}]: Error receiving message: {}",
+                ip, user_id, e
+            );
             break;
         }
 
@@ -232,12 +241,18 @@ pub async fn handle_websocket(
                         }
 
                         _ => {
-                            error!("    [{}] WS [{}]: Unknown message type: {}", ip, user_id, json_msg.r#type);
+                            error!(
+                                "    [{}] WS [{}]: Unknown message type: {}",
+                                ip, user_id, json_msg.r#type
+                            );
                             break;
                         }
                     }
                 } else {
-                    error!("    [{}] WS [{}]: Failed to deserialize message: {}", ip, user_id, msg);
+                    error!(
+                        "    [{}] WS [{}]: Failed to deserialize message: {}",
+                        ip, user_id, msg
+                    );
                     break;
                 }
             }
@@ -261,15 +276,20 @@ pub async fn handle_websocket(
     let _ = forward_task.await;
     GLOBAL_HUB.remove(&user_id);
 
+    let nb_users = get_user_count();
+
     // update user count
     let user_count_message = to_bytes(&JsonMessage {
         r#type: "nbusers".to_string(),
         id: 0,
-        content: get_user_count().to_string().into(),
+        content: nb_users.to_string().into(),
     });
     let _ = broadcast_to_all(user_count_message); // TODO: handle error
 
-    info!("    [{}] WS [{}]: User disconnected", ip, user_id);
+    info!(
+        "    [{}] WS [{}]: User disconnected, {} users left",
+        ip, user_id, nb_users
+    );
 
     Ok(())
 }
