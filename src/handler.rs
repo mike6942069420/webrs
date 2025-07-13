@@ -77,22 +77,23 @@ pub async fn handle_request(
             }
         }
     } else {
-        #[cfg(debug_assertions)]
-        {
-            // In debug, use localhost IP
-            "127.0.0.1".parse().unwrap()
-        }
+        "127.0.0.1".parse().unwrap()
+        //#[cfg(debug_assertions)]
+        //{
+        //    // In debug, use localhost IP
+        //    "127.0.0.1".parse().unwrap()
+        //}
 
-        #[cfg(not(debug_assertions))]
-        {
-            return err!(
-                StatusCode::FORBIDDEN,
-                format!(
-                    "Missing CF-Connecting-IP header |x| {}",
-                    dump_headers!(headers)
-                )
-            );
-        }
+        //#[cfg(not(debug_assertions))]
+        //{
+        //    return err!(
+        //        StatusCode::FORBIDDEN,
+        //        format!(
+        //            "Missing CF-Connecting-IP header |x| {}",
+        //            dump_headers!(headers)
+        //        )
+        //    );
+        //}
     };
 
     let method = req.method();

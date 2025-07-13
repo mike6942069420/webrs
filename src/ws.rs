@@ -31,7 +31,7 @@ type Tx = Sender<Message>;
 
 static GLOBAL_HUB: Lazy<DashMap<UserId, Tx>> = Lazy::new(DashMap::new);
 
-static GLOBAL_ID: Lazy<AtomicUsize> = Lazy::new(|| AtomicUsize::new(1));
+static GLOBAL_ID: AtomicUsize = AtomicUsize::new(1); // the user ID starts at 1, 0 is server ID
 
 macro_rules! send_message {
     ($ws_sink:expr, $msg:expr, $ip:expr) => {
@@ -112,7 +112,7 @@ pub async fn handle_websocket(
     let forward_sink = Arc::clone(&ws_sink); // goes into forward_task
 
     // Generate a unique user ID
-    let user_id = GLOBAL_ID.fetch_add(1, Ordering::Relaxed);
+    let user_id = GLOBAL_ID.fetch_add(1, Ordering::Relaxed); // TODO: handle overflow
     info!("    [{}] WS: New user connected with ID: {}", ip, user_id);
 
     // Register the user in the global hub

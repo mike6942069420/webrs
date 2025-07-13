@@ -20,15 +20,18 @@ use tracing::info;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("Starting server...");
-    //db::add_message(db::Message {
-    //    content: "hello world".to_string(),
-    //})
-    //.await;
     let _guard = logging::init_logging();
+
+    
+    if let Err(e) = db::init_messages().await {
+        eprintln!("Failed to initialize DB: {}", e);
+        return Err("Failed to initialize DB".into());
+    }
 
     let addr = SocketAddr::from(constants::MAIN_HOST);
     let listener = TcpListener::bind(addr).await?;
     info!("Listening on http://{}", addr);
+    println!("Listening on http://{}", addr);
 
     loop {
         let (stream, _) = listener.accept().await?;

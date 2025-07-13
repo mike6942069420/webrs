@@ -25,6 +25,9 @@
 
           # test
           apacheHttpd
+
+          # docker
+          docker
         ];
 
         # Setup environment to use musl target by default

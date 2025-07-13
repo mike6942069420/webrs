@@ -6,7 +6,7 @@ pub fn init_logging() -> tracing_appender::non_blocking::WorkerGuard {
     let file = OpenOptions::new()
         .append(true)
         .create(true)
-        .open("data/log.txt")
+        .open("data/webserver/log.txt")
         .expect("Failed to open log file");
 
     let (non_blocking, guard) = non_blocking(file);

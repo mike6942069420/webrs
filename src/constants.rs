@@ -1,4 +1,7 @@
-pub const MAIN_HOST: ([u8; 4], u16) = ([127, 0, 0, 1], 8080);
+#[cfg(debug_assertions)]
+pub const MAIN_HOST: ([u8; 4], u16) = ([127,0,0,1], 8080);  // only localhost in debug mode
+#[cfg(not(debug_assertions))]
+pub const MAIN_HOST: ([u8; 4], u16) = ([0,0,0,0], 8080);    // 0.0.0.0 because it lives in a Docker container
 
 pub const WS_BUFF_MESSAGES: usize = 32; // Maximum number of messages a clients channel can hold
 
