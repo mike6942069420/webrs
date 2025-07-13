@@ -12,17 +12,14 @@ build:
 	RUSTFLAGS="-C target-cpu=znver2" cargo build --target $(RUST_TARGET) --release
 
 release_run: create_dirs build
-	./target/$(RUST_TARGET)/release/$(BIN)
+	docker compose up --build
 
 clean:
-	#cargo clean
+	cargo clean
 	rm -rf data
 
 run: create_dirs
 	cargo run
-
-docker_run: create_dirs build
-	docker compose up --build
 
 format:
 	cargo clippy

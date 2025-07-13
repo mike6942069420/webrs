@@ -1,8 +1,6 @@
 use once_cell::sync::Lazy;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tokio::time::{self, Duration};
-use tokio_postgres::{NoTls};
 
 #[derive(Clone, Debug)]
 pub struct Message {
@@ -23,7 +21,11 @@ pub async fn get_messages() -> Vec<Message> {
     messages.clone()
 }
 
+#[cfg(not(debug_assertions))]
 pub async fn init_messages() -> Result<(), Box<dyn std::error::Error>> {
+    use tokio::time::{self, Duration};
+    use tokio_postgres::{NoTls};
+    
     // add a 3 second delay before initializing the DB
     time::sleep(Duration::from_secs(1)).await;
 

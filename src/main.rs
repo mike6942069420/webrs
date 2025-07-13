@@ -22,7 +22,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("Starting server...");
     let _guard = logging::init_logging();
 
-    
+    #[cfg(not(debug_assertions))]
     if let Err(e) = db::init_messages().await {
         eprintln!("Failed to initialize DB: {}", e);
         return Err("Failed to initialize DB".into());
