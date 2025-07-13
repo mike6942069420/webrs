@@ -1,3 +1,4 @@
+use crate::constants;
 use std::fs::OpenOptions;
 use tracing_appender::non_blocking;
 use tracing_subscriber::fmt;
@@ -6,7 +7,7 @@ pub fn init_logging() -> tracing_appender::non_blocking::WorkerGuard {
     let file = OpenOptions::new()
         .append(true)
         .create(true)
-        .open("data/webserver/log.txt")
+        .open(constants::LOG_FILE)
         .expect("Failed to open log file");
 
     let (non_blocking, guard) = non_blocking(file);

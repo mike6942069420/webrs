@@ -195,6 +195,8 @@ pub async fn handle_websocket(
                 if let Ok(json_msg) = serde_json::from_str::<JsonMessage>(&msg) {
                     match json_msg.r#type.as_str() {
                         "message" => {
+                            // TODO: validate message content and length
+
                             // Broadcast message to all users
                             if broadcast_to_all(Message::Text(msg)).is_err() {
                                 error!(
@@ -217,10 +219,8 @@ pub async fn handle_websocket(
                                 );
 
                                 // Store the message in the database
-                                db::add_message(db::Message {
-                                    content: json_msg.content.as_str().unwrap().to_string(),
-                                })
-                                .await;
+                                db::add_message(json_msg.content.as_str().unwrap().to_string())
+                                    .await;
                             }
                         }
                         "info" => {

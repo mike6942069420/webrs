@@ -7,7 +7,7 @@ edition = "2024"
 # tokio for async runtime
 tokio = { version = "1.46.1", features = ["full"] }
 
-# hyper for HTTP client/server
+# hyper for HTTP server
 hyper = { version = "1.6.0", features = ["full"] }
 http-body = { version = "1.0.1"}
 http-body-util = "0.1.3"
@@ -34,11 +34,9 @@ tracing-appender = "0.2.3"
 rand = { version = "0.9.1", features = ["std"] }
 base64 = "0.22.1"
 
-# once_cell for single initialization
+# once_cell for lazy initialization
 once_cell = "1.21.3"
 
-# tokio-postgres for database interaction
-tokio-postgres = { version = "0.7.13" }
 
 [profile.dev]
 opt-level = 0           # Default: no optimization, fast compile for debugging

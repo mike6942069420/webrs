@@ -124,11 +124,7 @@ pub async fn handle_request(
         (&Method::GET, "/") => {
             let nonce = crypt::generate_nonce_base64(32);
             let nb_users = ws::get_user_count();
-            let messages: Vec<String> = db::get_messages()
-                .await
-                .into_iter()
-                .map(|m| m.content)
-                .collect(); //may need to optimise
+            let messages: Vec<String> = db::get_messages().await;
 
             match template::render(template::Template {
                 nbusers:    &nb_users,

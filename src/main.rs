@@ -13,39 +13,55 @@ use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper_util::rt::TokioIo;
 use tokio::net::TcpListener;
+use tokio::signal::unix::{SignalKind, signal};
 
 // loging
-use tracing::info;
+use tracing::{error, info};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("Starting server...");
     let _guard = logging::init_logging();
 
-    #[cfg(not(debug_assertions))]
-    if let Err(e) = db::init_messages().await {
-        eprintln!("Failed to initialize DB: {}", e);
-        return Err("Failed to initialize DB".into());
-    }
-
     let addr = SocketAddr::from(constants::MAIN_HOST);
     let listener = TcpListener::bind(addr).await?;
+
+    let mut sigint = signal(SignalKind::interrupt())?;
+    let mut sigterm = signal(SignalKind::terminate())?;
+
     info!("Listening on http://{}", addr);
-    println!("Listening on http://{}", addr);
+    println!("Listening on http://{addr}");
 
     loop {
-        let (stream, _) = listener.accept().await?;
-        let io = TokioIo::new(stream);
+        tokio::select! {
+            conn = listener.accept() => {
+                let (stream, _) = conn?;
+                let io = TokioIo::new(stream);
 
-        tokio::task::spawn(async move {
-            if let Err(err) = http1::Builder::new()
-                .keep_alive(true)
-                .serve_connection(io, service_fn(handler::handle_request))
-                .with_upgrades()
-                .await
-            {
-                eprintln!("Error serving connection: {err:?}");
+                tokio::spawn(async move {
+                    if let Err(err) = http1::Builder::new()
+                        .keep_alive(true)
+                        .serve_connection(io, service_fn(handler::handle_request))
+                        .with_upgrades()
+                        .await
+                    {
+                        error!("Error serving connection: {:?}", err);
+                        eprintln!("Error serving connection: {err:?}");
+                    }
+                });
+            },
+            _ = sigint.recv() => {
+                info!("Shutdown signal received: SIGINT");
+                println!("Shutdown signal received: SIGINT");
+                break;
+            },
+            _ = sigterm.recv() => {
+                info!("Shutdown signal received: SIGTERM");
+                println!("Shutdown signal received: SIGTERM");
+                break;
             }
-        });
+        }
     }
+
+    Ok(())
 }

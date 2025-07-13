@@ -4,9 +4,8 @@ RUST_TARGET=x86_64-unknown-linux-musl
 all: build
 
 create_dirs:
-	mkdir -p data/webserver
-	mkdir -p data/postgres
-	touch data/webserver/log.txt
+	mkdir -p data
+	touch data/log.txt
 
 build:
 	RUSTFLAGS="-C target-cpu=znver2" cargo build --target $(RUST_TARGET) --release
