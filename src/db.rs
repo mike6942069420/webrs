@@ -1,7 +1,7 @@
 use once_cell::sync::Lazy;
 use tokio::sync::RwLock;
 
-// Global messages store as a static RwLock-wrapped Vec<Message>
+// Global messages store as a static RwLock-wrapped Vec<String>
 static GLOBAL_MESSAGES: Lazy<RwLock<Vec<String>>> = Lazy::new(|| RwLock::new(Vec::new()));
 
 pub async fn add_message(msg: String) {

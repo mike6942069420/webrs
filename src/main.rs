@@ -29,7 +29,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let mut sigint = signal(SignalKind::interrupt())?;
     let mut sigterm = signal(SignalKind::terminate())?;
 
-    info!("Listening on http://{}", addr);
+    info!("======================================================== Listening on http://{} ========================================================", addr);
     println!("Listening on http://{addr}");
 
     loop {
@@ -45,18 +45,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                         .with_upgrades()
                         .await
                     {
-                        error!("Error serving connection: {:?}", err);
+                        error!("XXX Error serving connection: {:?}", err);
                         eprintln!("Error serving connection: {err:?}");
                     }
                 });
             },
             _ = sigint.recv() => {
-                info!("Shutdown signal received: SIGINT");
+                info!("XXX SIGINT");
                 println!("Shutdown signal received: SIGINT");
                 break;
             },
             _ = sigterm.recv() => {
-                info!("Shutdown signal received: SIGTERM");
+                info!("XXX SIGTERM");
                 println!("Shutdown signal received: SIGTERM");
                 break;
             }

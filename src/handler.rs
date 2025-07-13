@@ -9,7 +9,7 @@ use hyper::{Method, StatusCode};
 use hyper::{Request, Response};
 use std::net::IpAddr;
 
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 static F_FAVICON: &[u8] = include_bytes!("../templates/favicon.ico");
 static F_SITEMAP: &[u8] = include_bytes!("../templates/sitemap.xml");
@@ -77,23 +77,12 @@ pub async fn handle_request(
             }
         }
     } else {
-        "127.0.0.1".parse().unwrap()
-        //#[cfg(debug_assertions)]
-        //{
-        //    // In debug, use localhost IP
-        //    "127.0.0.1".parse().unwrap()
-        //}
+        let ip = headers
+            .get("X-Forwarded-For")
+            .and_then(|v| v.to_str().ok()).unwrap_or("").parse().unwrap_or(IpAddr::from([127, 0, 0, 1]));
+        warn!("[-------->] No CF-Connecting-IP header found, using X-Forwarded-For or defaulting to: {}", ip);
+        ip
 
-        //#[cfg(not(debug_assertions))]
-        //{
-        //    return err!(
-        //        StatusCode::FORBIDDEN,
-        //        format!(
-        //            "Missing CF-Connecting-IP header |x| {}",
-        //            dump_headers!(headers)
-        //        )
-        //    );
-        //}
     };
 
     let method = req.method();

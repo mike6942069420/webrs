@@ -113,7 +113,7 @@ pub async fn handle_websocket(
 
     // Generate a unique user ID
     let user_id = GLOBAL_ID.fetch_add(1, Ordering::Relaxed); // TODO: handle overflow
-    info!("    [{}] WS: New user connected with ID: {}", ip, user_id);
+    info!("    [{}] WS [{}]: New user connected", ip, user_id);
 
     // Register the user in the global hub
     GLOBAL_HUB.insert(user_id, tx);
@@ -129,7 +129,7 @@ pub async fn handle_websocket(
                         Some(msg) => {
                             let mut sink = forward_sink.lock().await;
                             if let Err(e) = sink.send(msg).await {
-                                error!("    [{}] WS: Failed to send message to user {}: {}", ip, user_id, e);
+                                error!("    [{}] WS [{}]: Failed to send message to user: {}", ip, user_id, e);
                                 break;
                             }
                         }
@@ -151,11 +151,11 @@ pub async fn handle_websocket(
                 _ = interval.tick() => {
                     let mut sink = ping_sink.lock().await;
                     if let Err(e) = sink.send(Message::Ping(Vec::new().into())).await {
-                        error!("    [{}] WS: Failed to send ping to user {}: {}", ip, user_id, e);
+                        error!("    [{}] WS [{}]: Failed to send ping: {}", ip, user_id, e);
                         break;
                     } else {
                         #[cfg(debug_assertions)]
-                        info!("    [{}] WS: Sent ping to user {}", ip, user_id);
+                        info!("    [{}] WS [{}]: Sent ping to user", ip, user_id);
                     }
                 }
                 _ = shutdown_rx_ping.changed() => break
@@ -183,13 +183,13 @@ pub async fn handle_websocket(
     // receives messages from the WebSocket stream
     while let Some(message) = ws_stream.next().await {
         if let Err(e) = &message {
-            error!("    [{}] WS: Error receiving message: {}", ip, e);
+            error!("    [{}] WS [{}]: Error receiving message: {}", ip, user_id, e);
             break;
         }
 
         match message? {
             Message::Text(msg) => {
-                info!("    [{}] WS: Received Text: {}", ip, msg);
+                info!("    [{}] WS [{}]: Received Text: {}", ip, user_id, msg);
 
                 // if the message type is message, broadcast it to all users
                 if let Ok(json_msg) = serde_json::from_str::<JsonMessage>(&msg) {
@@ -200,8 +200,8 @@ pub async fn handle_websocket(
                             // Broadcast message to all users
                             if broadcast_to_all(Message::Text(msg)).is_err() {
                                 error!(
-                                    "    [{}] WS: Failed to broadcast message: {}",
-                                    ip, json_msg.content
+                                    "    [{}] WS [{}]: Failed to broadcast message: {}",
+                                    ip, user_id, json_msg.content
                                 );
 
                                 // TODO: make message static
@@ -214,7 +214,7 @@ pub async fn handle_websocket(
                                 send_message!(ws_sink, error_message, ip);
                             } else {
                                 info!(
-                                    "    [{}] WS: Broadcasted message from user {}: {}",
+                                    "    [{}] WS [{}]: Broadcasted message: {}",
                                     ip, user_id, json_msg.content
                                 );
 
@@ -232,18 +232,18 @@ pub async fn handle_websocket(
                         }
 
                         _ => {
-                            error!("    [{}] WS: Unknown message type: {}", ip, json_msg.r#type);
+                            error!("    [{}] WS [{}]: Unknown message type: {}", ip, user_id, json_msg.r#type);
                             break;
                         }
                     }
                 } else {
-                    error!("    [{}] WS: Failed to deserialize message: {}", ip, msg);
+                    error!("    [{}] WS [{}]: Failed to deserialize message: {}", ip, user_id, msg);
                     break;
                 }
             }
 
             Message::Binary(msg) => {
-                error!("    [{}] WS: Received Binary: {:?}", ip, msg);
+                error!("    [{}] WS [{}]: Received Binary: {:?}", ip, user_id, msg);
                 break;
             }
 
@@ -269,7 +269,7 @@ pub async fn handle_websocket(
     });
     let _ = broadcast_to_all(user_count_message); // TODO: handle error
 
-    info!("    [{}] WS: User {} disconnected", ip, user_id);
+    info!("    [{}] WS [{}]: User disconnected", ip, user_id);
 
     Ok(())
 }
