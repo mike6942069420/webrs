@@ -19,9 +19,7 @@
           coreutils
           gnumake
           git
-          ssh
           docker
-          scp
 
           # rust toolchain
           rustup
