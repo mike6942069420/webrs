@@ -116,7 +116,7 @@ pub async fn handle_request(
     match (method, path) {
         (&Method::GET, "/") => {
             let nonce = crypt::generate_nonce_base64(32);
-            let nb_users = ws::get_user_count();
+            let nb_users = ws::get_user_count() + 1;
 
             match db::render(&nb_users,&nonce).await {
                 Ok(body) => Ok(response_builder
