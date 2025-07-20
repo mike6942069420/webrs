@@ -8,7 +8,8 @@ REMOTE_DIR=/home/mike/system-config/systems/server1/docker_containers
 IMAGE_NAME=webrs:latest
 
 # VERSION OF THE CODEBASE ONLY (code inside src and templates)
-VERSION="v1.1.1"
+# version follows format vMAJOR.MINOR.PATCH
+VERSION="v1.1.2"
 
 
 all: build

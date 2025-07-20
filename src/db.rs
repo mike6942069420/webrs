@@ -1,6 +1,7 @@
-/*  TODO: can be greatly optimized
-    - Use a more efficient data structure for messages (pre allocation)
-    - Lock times of GLOBAL_MESSAGES may be too long in render or initialize
+/*  TODO: can be improved
+    - Might look into more efficient data structures for messages
+    - May want to store messages in json to add metadata
+    - Lock times of GLOBAL_MESSAGES may be too long in render or initialize functions
 */
 use crate::constants;
 use once_cell::sync::Lazy;
@@ -23,8 +24,13 @@ struct Template<'a> {
     pub messages: &'a Vec<String>,
 }
 
-static GLOBAL_MESSAGES: Lazy<Arc<RwLock<Vec<String>>>> =
-    Lazy::new(|| Arc::new(RwLock::new(Vec::new())));
+static GLOBAL_MESSAGES: Lazy<Arc<RwLock<Vec<String>>>> = Lazy::new(|| {
+    let mut vec = Vec::with_capacity(constants::DB_INIT_NB_MSG);
+    for _ in 0..constants::DB_INIT_NB_MSG {
+        vec.push(String::with_capacity(constants::DB_MAX_MSG_SIZE));
+    }
+    Arc::new(RwLock::new(vec))
+});
 
 pub async fn add_message(msg: String) {
     let mut messages = GLOBAL_MESSAGES.write().await;
