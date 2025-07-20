@@ -33,7 +33,7 @@ Run `nix develop` to enter a shell with all required dependencies.
 ### Docker
 
 The `Dockerfile` and `docker-compose.yml` provide a runtime environment for the webserver.  
-The build happens locally; Docker is used to test the production binary in a containerized environment.
+The build happens locally; Docker is used to test the production binary in a containerized environment but it is also used for deployment by sending over the built Dockerfile image to the remote server.
 
 ### Git
 

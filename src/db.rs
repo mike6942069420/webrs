@@ -7,7 +7,6 @@ use crate::constants;
 use once_cell::sync::Lazy;
 use sailfish::{RenderError, TemplateSimple};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use tokio::fs;
 use tokio::fs::OpenOptions;
 use tokio::io::AsyncWriteExt;
@@ -57,24 +56,22 @@ pub async fn render(nbusers: &usize, nonce: &str) -> Result<String, RenderError>
     template.render_once()
 }
 
-pub async fn initialize() -> bool {
-    let message_count: AtomicUsize = AtomicUsize::new(0);
+pub async fn initialize() -> Result<(), std::io::Error> {
+    // can be used by one task only
+    let mut count_prev;
 
+    // read from file and initialize GLOBAL_MESSAGES
     {
         let mut messages = GLOBAL_MESSAGES.write().await;
         messages.clear();
-        // read from file
 
-        if let Ok(contents) = fs::read_to_string(constants::DB_FILE).await {
-            for line in contents.lines() {
-                messages.push(line.to_string());
-            }
-        } else {
-            error!("[D] Failed to read from file: {}", constants::DB_FILE);
-            return false;
+        // read from file
+        let contents = fs::read_to_string(constants::DB_FILE).await?;
+        for line in contents.lines() {
+            messages.push(line.to_string());
         }
 
-        message_count.store(messages.len(), Ordering::Relaxed);
+        count_prev = messages.len();
     }
 
     // spawn task to write to DB_FILE every 1 second
@@ -86,7 +83,6 @@ pub async fn initialize() -> bool {
             .await;
 
             let messages = GLOBAL_MESSAGES.read().await;
-            let count_prev = message_count.load(Ordering::Relaxed);
             let count_current = messages.len();
             if count_prev < count_current {
                 let new_messages = &messages[count_prev..count_current];
@@ -101,17 +97,17 @@ pub async fn initialize() -> bool {
                     if let Err(e) = file.write_all(buffer.as_bytes()).await {
                         error!("[D] Failed to write messages to file: {}", e);
                     }
-                    message_count.store(count_current, Ordering::Relaxed);
-
                     #[cfg(debug_assertions)]
                     info!("[D] Wrote {} messages to file", count_current - count_prev);
+
+                    count_prev = count_current;
                 } else {
                     error!(
                         "[D] Failed to open file for writing: {}",
                         constants::DB_FILE
                     );
                 }
-            } else if cfg!(debug_assertions) {
+            } else {
                 #[cfg(debug_assertions)]
                 info!(
                     "[D] No new messages to write to file, current count: {}",
@@ -120,5 +116,5 @@ pub async fn initialize() -> bool {
             }
         }
     });
-    true
+    Ok(())
 }

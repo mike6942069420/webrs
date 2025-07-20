@@ -20,11 +20,10 @@ use tracing::{error, info};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("Starting server...");
-    let _guard = log::init_logging();
-    if !db::initialize().await {
-        error!("[M] Failed to initialize database");
-        return Err("Failed to initialize database".into());
-    }
+
+    // initialize logging and database
+    let _guard = log::init_logging()?;
+    db::initialize().await?;
 
     let addr = SocketAddr::from(constants::MAIN_HOST);
     let listener = TcpListener::bind(addr).await?;
