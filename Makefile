@@ -7,6 +7,9 @@ REMOTE_HOST=192.168.1.201
 REMOTE_DIR=/home/mike/system-config/systems/server1/docker_containers
 IMAGE_NAME=webrs:latest
 
+# VERSION
+VERSION="v1.1.1"
+
 
 all: build
 
@@ -33,9 +36,26 @@ format:
 	cargo fmt
 
 format_fix: format
+	cargo fmt -- --check
 	cargo clippy --fix --bin "webrs" --allow-dirty
 
-deploy: format_fix build
+git: format_fix build
+	@git add -A
+	@read -p "Commit message: " msg; \
+	if [ -z "$$msg" ]; then \
+		echo "Aborting commit: empty message"; exit 1; \
+	fi; \
+	git commit -m "$$msg"
+	@if git rev-parse "$(VERSION)" >/dev/null 2>&1; then \
+		echo "Tag $(VERSION) exists, skipping tag creation"; \
+	else \
+		git tag "$(VERSION)"; \
+		git push origin "$(VERSION)"; \
+		echo "Tag $(VERSION) created and pushed"; \
+	fi
+	@git push
+
+deploy: git
 	docker build -t $(IMAGE_NAME) .
 	docker save $(IMAGE_NAME) -o webrs.tar
 	scp webrs.tar $(REMOTE_USER)@$(REMOTE_HOST):/tmp/webrs.tar

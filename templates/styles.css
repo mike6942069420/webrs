@@ -212,6 +212,22 @@ p {
     color: rgba(170, 187, 221, 0.6);
 }
 
+  #version-info {
+    position: fixed;
+    bottom: 5px;
+    right: 5px;
+    font-size: 10px;
+    color: #888;
+    cursor: default;
+    user-select: none;
+    opacity: 0.2;
+    transition: opacity 0.3s ease;
+  }
+  #version-info:hover {
+    opacity: 1;
+    color: #444;
+  }
+
 /* ===========================
    Notification
    =========================== */

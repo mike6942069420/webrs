@@ -1,15 +1,19 @@
 /*  TODO: can be greatly optimized
-    - Write to file only when messages change
-    - Write to file with tokio::fs::write
-    - Track deltas instead of full messages
     - Use a more efficient data structure for messages (pre allocation)
+    - Lock times of GLOBAL_MESSAGES may be too long in render or initialize
 */
 use crate::constants;
 use once_cell::sync::Lazy;
 use sailfish::{RenderError, TemplateSimple};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use tokio::fs;
+use tokio::fs::OpenOptions;
+use tokio::io::AsyncWriteExt;
 use tokio::sync::RwLock;
 use tracing::error;
+#[cfg(debug_assertions)]
+use tracing::info;
 
 #[derive(TemplateSimple)]
 #[template(path = "index.html")]
@@ -47,31 +51,68 @@ pub async fn render(nbusers: &usize, nonce: &str) -> Result<String, RenderError>
     template.render_once()
 }
 
-pub async fn initialize() {
+pub async fn initialize() -> bool {
+    let message_count: AtomicUsize = AtomicUsize::new(0);
+
     {
         let mut messages = GLOBAL_MESSAGES.write().await;
         messages.clear();
         // read from file
-        if let Ok(lines) = std::fs::read_to_string(constants::DB_FILE) {
-            for line in lines.lines() {
+
+        if let Ok(contents) = fs::read_to_string(constants::DB_FILE).await {
+            for line in contents.lines() {
                 messages.push(line.to_string());
             }
+        } else {
+            error!("[D] Failed to read from file: {}", constants::DB_FILE);
+            return false;
         }
+
+        message_count.store(messages.len(), Ordering::Relaxed);
     }
 
     // spawn task to write to DB_FILE every 1 second
-    let store = GLOBAL_MESSAGES.clone();
     tokio::spawn(async move {
         loop {
             tokio::time::sleep(tokio::time::Duration::from_secs(
                 constants::DB_WRITE_INTERVAL,
             ))
             .await;
-            let messages = store.read().await;
-            let content = messages.join("\n");
-            if let Err(e) = std::fs::write(constants::DB_FILE, content) {
-                error!("DDD Failed to write messages to file: {}", e);
+
+            let messages = GLOBAL_MESSAGES.read().await;
+            let count_prev = message_count.load(Ordering::Relaxed);
+            let count_current = messages.len();
+            if count_prev < count_current {
+                let new_messages = &messages[count_prev..count_current];
+
+                // Open the file in append mode
+                if let Ok(mut file) = OpenOptions::new()
+                    .append(true)
+                    .open(constants::DB_FILE)
+                    .await
+                {
+                    let buffer = new_messages.join("\n") + "\n";
+                    if let Err(e) = file.write_all(buffer.as_bytes()).await {
+                        error!("[D] Failed to write messages to file: {}", e);
+                    }
+                    message_count.store(count_current, Ordering::Relaxed);
+
+                    #[cfg(debug_assertions)]
+                    info!("[D] Wrote {} messages to file", count_current - count_prev);
+                } else {
+                    error!(
+                        "[D] Failed to open file for writing: {}",
+                        constants::DB_FILE
+                    );
+                }
+            } else if cfg!(debug_assertions) {
+                #[cfg(debug_assertions)]
+                info!(
+                    "[D] No new messages to write to file, current count: {}",
+                    count_current
+                );
             }
         }
     });
+    true
 }

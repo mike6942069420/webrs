@@ -28,8 +28,8 @@ Run `nix develop` to enter a shell with all required dependencies.
 | `make release_run` | Build the release webserver and run it                                                        |
 | `make clean`    | Clean the build directory                                                                     |
 | `make format`   | Format the code using `cargo fmt` and `cargo clippy`                                          |
-| `make test`     | Run tests                                                                                     |
-| `make deploy`   | Build the Docker image, save it, and deploy it to the remote server using Docker Compose      |
+| `make format_fix` | Format the code and automatically fix any issues using `cargo fmt -- --check` and `cargo clippy --fix` |
+| `make deploy`   | Build the release webserver, build the Docker image, save it, and deploy it to the remote server using Docker Compose      |
 
 ##### Docker
 The `Dockerfile` and `docker-compose.yml` files are a run environment for the webserver.\

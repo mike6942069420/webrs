@@ -21,7 +21,10 @@ use tracing::{error, info};
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("Starting server...");
     let _guard = log::init_logging();
-    db::initialize().await;
+    if !db::initialize().await {
+        error!("[M] Failed to initialize database");
+        return Err("Failed to initialize database".into());
+    }
 
     let addr = SocketAddr::from(constants::MAIN_HOST);
     let listener = TcpListener::bind(addr).await?;
@@ -30,7 +33,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let mut sigterm = signal(SignalKind::terminate())?;
 
     info!(
-        "======================================================== Listening on http://{} ========================================================",
+        "[M] ==================================================== Listening on http://{} ====================================================",
         addr
     );
     println!("Listening on http://{addr}");
@@ -48,18 +51,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                         .with_upgrades()
                         .await
                     {
-                        error!("XXX Error serving connection: {:?}", err);
+                        error!("[M] Error serving connection: {:?}", err);
                         eprintln!("Error serving connection: {err:?}");
                     }
                 });
             },
             _ = sigint.recv() => {
-                info!("XXX SIGINT");
+                info!("[M] SIGINT");
                 println!("Shutdown signal received: SIGINT");
                 break;
             },
             _ = sigterm.recv() => {
-                info!("XXX SIGTERM");
+                info!("[M] SIGTERM");
                 println!("Shutdown signal received: SIGTERM");
                 break;
             }
