@@ -9,7 +9,7 @@ IMAGE_NAME=webrs:latest
 
 # VERSION OF THE CODEBASE ONLY (code inside src and templates)
 # version follows format vMAJOR.MINOR.PATCH
-VERSION="v1.1.3"
+VERSION="v1.1.4"
 
 
 all: build

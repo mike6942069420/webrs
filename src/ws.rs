@@ -4,6 +4,7 @@ use crate::db;
 use dashmap::DashMap;
 use futures_util::{SinkExt, StreamExt};
 use hyper_tungstenite::HyperWebsocket;
+use hyper_tungstenite::tungstenite::Utf8Bytes;
 use hyper_tungstenite::tungstenite::{self, Message};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
@@ -16,7 +17,6 @@ use tokio::{
     sync::Mutex,
     time::{self, Duration},
 };
-use tokio_tungstenite::tungstenite::Utf8Bytes;
 use tracing::{error, info};
 
 #[derive(Serialize, Deserialize, Debug)]
