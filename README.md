@@ -29,6 +29,7 @@ Run `nix develop` to enter a shell with all required dependencies.
 | `make format_fix` | Format code and automatically fix issues using `cargo fmt -- --check` and `cargo clippy --fix` |
 | `make deploy`     | Build release, create Docker image, save it, and deploy it to remote server via Docker Compose|
 | `make git`        | Add all changes, prompt for commit message, and push commits with the correct tag            |
+| `make full`       | Run `make git` and `make deploy` to commit changes and deploy the latest version            |
 
 ### Docker
 

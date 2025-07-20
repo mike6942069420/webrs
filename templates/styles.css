@@ -214,7 +214,7 @@ p {
 
   #version-info {
     position: fixed;
-    bottom: 5px;
+    top: 5px;
     right: 5px;
     font-size: 10px;
     color: #888;

@@ -9,7 +9,7 @@ IMAGE_NAME=webrs:latest
 
 # VERSION OF THE CODEBASE ONLY (code inside src and templates)
 # version follows format vMAJOR.MINOR.PATCH
-VERSION="v1.1.5"
+VERSION="v1.1.6"
 
 
 all: build
@@ -66,5 +66,6 @@ deploy: format_fix build
 	ssh -t $(REMOTE_USER)@$(REMOTE_HOST) "cd $(REMOTE_DIR) && sudo docker compose up -d --build"
 	rm webrs.tar
 
+make full: git deploy
 
-.PHONY: all build clean run
+.PHONY: all build clean run full
