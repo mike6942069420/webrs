@@ -7,7 +7,7 @@ REMOTE_HOST=192.168.1.201
 REMOTE_DIR=/home/mike/system-config/systems/server1/docker_containers
 IMAGE_NAME=webrs:latest
 
-# VERSION
+# VERSION OF THE CODEBASE ONLY (code inside src and templates)
 VERSION="v1.1.1"
 
 
@@ -46,16 +46,18 @@ git: format_fix build
 		echo "Aborting commit: empty message"; exit 1; \
 	fi; \
 	git commit -m "$$msg"
+
+	@git push origin main
+
 	@if git rev-parse "$(VERSION)" >/dev/null 2>&1; then \
-		echo "Tag $(VERSION) exists, skipping tag creation"; \
+		echo "Tag $(VERSION) exists, skipping creation"; \
 	else \
 		git tag "$(VERSION)"; \
 		git push origin "$(VERSION)"; \
 		echo "Tag $(VERSION) created and pushed"; \
-	fi
-	@git push
+	fi 
 
-deploy: git
+deploy: format_fix build
 	docker build -t $(IMAGE_NAME) .
 	docker save $(IMAGE_NAME) -o webrs.tar
 	scp webrs.tar $(REMOTE_USER)@$(REMOTE_HOST):/tmp/webrs.tar

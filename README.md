@@ -30,6 +30,7 @@ Run `nix develop` to enter a shell with all required dependencies.
 | `make format`   | Format the code using `cargo fmt` and `cargo clippy`                                          |
 | `make format_fix` | Format the code and automatically fix any issues using `cargo fmt -- --check` and `cargo clippy --fix` |
 | `make deploy`   | Build the release webserver, build the Docker image, save it, and deploy it to the remote server using Docker Compose      |
+| `make git`      | Add all changes to git, prompt for a commit message, and push the changes to the remote repository with correct tag|
 
 ##### Docker
 The `Dockerfile` and `docker-compose.yml` files are a run environment for the webserver.\
