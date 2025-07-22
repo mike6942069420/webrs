@@ -42,6 +42,7 @@ format_fix: format
 
 git: format_fix build
 	@git add -A
+	@git status
 	@read -p "Commit message: " msg; \
 	if [ -z "$$msg" ]; then \
 		echo "Aborting commit: empty message"; exit 1; \
