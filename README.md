@@ -8,7 +8,7 @@ Git repository containing the Rust webserver and webpage for [www.bigmike.ch](ht
 > you **must** also make the complete, corresponding source code available to all users.  
 > See the `LICENSE` file for full license terms.
 > 
-> The background photo `templates/images/bg.webp` included in this repository is licensed separately under  
+> The background photo `templates/bg.webp` included in this repository is licensed separately under  
 > **Creative Commons Attribution 4.0 International (CC BY 4.0)**.  
 > You may use and share the photo as long as proper attribution is provided.
 
@@ -42,19 +42,8 @@ The `make git` target is a convenience command that:
 
 - Adds all changes to Git
 - Prompts for a commit message
-- Pushes changes to the remote repository with the correct tag
+- Pushes changes to the remote repository with the correct tag representing the current version given in the `Makefile`, if the tag has not changed since last commit, it will not create a new tag.
 
 ### Version Consistency
 
-Before using `make git`, ensure the version string follows the format `vMAJOR.MINOR.PATCH` (e.g., `v1.1.1`) and only concerns codebase updates (`src` and `templates` directories). It must be the same across the following files:
-
-- **`Makefile`**:  
-  Set the `VERSION` variable to the current codebase version.
-
-- **`Cargo.toml`**:  
-  The `version` field should match the `Makefile` version.
-
-- **`templates/index.html`**:  
-  The `version-info` **div** should display the same version for deployment verification on the website.
-
-*This process can be automated in the future.*
+Before using `make git`, ensure the package version in `Cargo.toml` follows the format `MAJOR.MINOR.PATCH` (e.g., `1.1.1`) and only concerns codebase updates (`src` and `templates` directories).

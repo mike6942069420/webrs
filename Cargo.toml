@@ -1,16 +1,16 @@
 [package]
 name = "webrs"
-version = "1.1.6"
+version = "1.2.0"
 edition = "2024"
 
 [dependencies]
 # tokio for async runtime
-tokio = { version = "1.46.1", features = ["full"] }
+tokio = { version = "1.47.0", features = ["full"] }
 
 # hyper for HTTP server
 hyper = { version = "1.6.0", features = ["full"] }
 http-body-util = "0.1.3"
-hyper-util = { version = "0.1.15", features = ["full"] }
+hyper-util = { version = "0.1.16", features = ["full"] }
 bytes = "1.10.1"
 
 # websocket
@@ -35,6 +35,8 @@ base64 = "0.22.1"
 # once_cell for lazy initialization
 once_cell = "1.21.3"
 
+[build-dependencies]
+sha2 = "0.10"
 
 [profile.dev]
 opt-level = 0           # Default: no optimization, fast compile for debugging

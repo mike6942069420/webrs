@@ -14,7 +14,7 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    background-image: url('/images/9d878e595dc522b07a801eae0fc6974d.webp');
+    background-image: url('{{BUILD_URL_BG}}');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;

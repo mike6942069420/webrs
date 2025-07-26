@@ -16,7 +16,8 @@ use tracing::error;
 use tracing::info;
 
 #[derive(TemplateSimple)]
-#[template(path = "index.html")]
+#[template(path = "../target/user_dir/index.html")] // pre-templated by build.rs
+#[template(rm_whitespace = true)]
 struct Template<'a> {
     pub nbusers: &'a usize,
     pub nonce: &'a str,
@@ -36,6 +37,8 @@ pub async fn add_message(msg: String) {
     messages.push(msg);
 }
 
+// TODO: optimize by not having to do a deep copy of the template each time we return the result
+// rather render once to a buffer allocated in the calling function
 pub async fn render(nbusers: &usize, nonce: &str) -> Result<String, RenderError> {
     // might lock a bit too long but does not copy
     let store = GLOBAL_MESSAGES.clone();

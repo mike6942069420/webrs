@@ -1,16 +1,14 @@
 BIN=webrs
 RUST_TARGET=x86_64-unknown-linux-musl
 
-# CD vars
+# Deployment vars
 REMOTE_USER=mike
 REMOTE_HOST=192.168.1.201
 REMOTE_DIR=/home/mike/system-config/systems/server1/docker_containers
 IMAGE_NAME=webrs:latest
 
-# VERSION OF THE CODEBASE ONLY (code inside src and templates)
-# version follows format vMAJOR.MINOR.PATCH
-VERSION="v1.1.6"
-
+# Get the version from Cargo.toml
+VERSION := $(shell grep ^version Cargo.toml | head -1 | sed -E 's/version = "([^"]+)"/\1/')
 
 all: build
 
@@ -18,8 +16,9 @@ create_dirs:
 	mkdir -p data
 	touch data/log.txt
 	touch data/db.txt
+	mkdir -p target/user_dir
 
-build:
+build: create_dirs
 	RUSTFLAGS="-C target-cpu=znver2" cargo build --target $(RUST_TARGET) --release
 
 release_run: create_dirs build
@@ -32,9 +31,9 @@ clean:
 run: create_dirs
 	cargo run
 
-format:
+format: build
+	cargo fmt --all
 	cargo clippy
-	cargo fmt
 
 format_fix: format
 	cargo fmt -- --check

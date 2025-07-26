@@ -1,3 +1,4 @@
+use crate::constants;
 use crate::crypt;
 use crate::db;
 use crate::ws;
@@ -9,12 +10,6 @@ use hyper::{Request, Response};
 use std::net::IpAddr;
 
 use tracing::{error, info, warn};
-
-static F_FAVICON: &[u8] = include_bytes!("../templates/favicon.ico");
-static F_SITEMAP: &[u8] = include_bytes!("../templates/sitemap.xml");
-static F_ROBOTS: &[u8] = include_bytes!("../templates/robots.txt");
-static F_STYLES: &[u8] = include_bytes!("../templates/styles.css");
-static F_BG: &[u8] = include_bytes!("../templates/images/bg.webp");
 
 macro_rules! empty {
     () => {
@@ -121,7 +116,7 @@ pub async fn handle_request(
             match db::render(&nb_users,&nonce).await {
                 Ok(body) => Ok(response_builder
                     .header("Content-Security-Policy", format!(
-                        "default-src 'none'; script-src 'self' 'nonce-{nonce}'; style-src 'self'; img-src 'self'; connect-src 'self'"
+                        "default-src 'none'; script-src 'nonce-{nonce}'; style-src 'self'; img-src 'self'; connect-src 'self'"
                     ))
                     .header("Cache-Control", "no-cache, no-store, must-revalidate")
                     .header("Content-Type", "text/html; charset=utf-8")
@@ -153,34 +148,42 @@ pub async fn handle_request(
             }
         }
 
-        (&Method::GET, "/favicon.ico") => Ok(response_builder
-            .header("Cache-Control", "public, max-age=86400")
-            .header("Content-Type", "image/x-icon")
-            .body(full!(F_FAVICON))
-            .unwrap()),
-
+        // From here on, static files that have fixed paths
         (&Method::GET, "/sitemap.xml") => Ok(response_builder
             .header("Cache-Control", "public, max-age=86400")
             .header("Content-Type", "application/xml; charset=utf-8")
-            .body(full!(F_SITEMAP))
+            .body(full!(constants::F_SITEMAP))
             .unwrap()),
 
         (&Method::GET, "/robots.txt") => Ok(response_builder
             .header("Cache-Control", "public, max-age=86400")
             .header("Content-Type", "text/plain; charset=utf-8")
-            .body(full!(F_ROBOTS))
+            .body(full!(constants::F_ROBOTS))
             .unwrap()),
 
-        (&Method::GET, "/styles.css") => Ok(response_builder
-            .header("Cache-Control", "no-cache, no-store, must-revalidate")
+        // From here on, static files that need cache busting for modifications
+        (&Method::GET, constants::URL_ICON) => Ok(response_builder
+            .header("Cache-Control", "public, max-age=31536000, immutable")
+            .header("Content-Type", "image/png")
+            .body(full!(constants::F_ICON))
+            .unwrap()),
+
+        (&Method::GET, constants::URL_CSS) => Ok(response_builder
+            .header("Cache-Control", "public, max-age=31536000, immutable")
             .header("Content-Type", "text/css; charset=utf-8")
-            .body(full!(F_STYLES))
+            .body(full!(constants::F_CSS))
             .unwrap()),
 
-        (&Method::GET, "/images/9d878e595dc522b07a801eae0fc6974d.webp") => Ok(response_builder
+        (&Method::GET, constants::URL_JS) => Ok(response_builder
+            .header("Cache-Control", "public, max-age=31536000, immutable")
+            .header("Content-Type", "application/javascript; charset=utf-8")
+            .body(full!(constants::F_JS))
+            .unwrap()),
+
+        (&Method::GET, constants::URL_BG) => Ok(response_builder
             .header("Cache-Control", "public, max-age=31536000, immutable")
             .header("Content-Type", "image/webp")
-            .body(full!(F_BG))
+            .body(full!(constants::F_BG))
             .unwrap()),
 
         // Return 404 Not Found for other routes.
