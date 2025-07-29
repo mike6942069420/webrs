@@ -1,36 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Character encoding -->
     <meta charset="UTF-8">
-
-    <!-- Viewport for responsive design -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <!-- Basic SEO -->
     <meta name="description" content="Welcome to www.bigmike.ch! Leave a message for everyone to see.">
     <meta name="keywords" content="Big Mike, personal project, web development">
     <meta name="author" content="Big Mike">
     <meta name="robots" content="index, follow">
-
-    <!-- Page title -->
     <title>Welcome to Mike's Website</title>
-
-    <!-- Open Graph metadata (for social sharing) -->
     <meta property="og:title" content="Welcome to Mike's Website">
     <meta property="og:description" content="Welcome to www.bigmike.ch! Leave a message for everyone to see.">
     <meta property="og:image" content="https://www.bigmike.ch{{BUILD_URL_BG}}">
     <meta property="og:url" content="https://www.bigmike.ch/">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Big Mike's Website">
-
-    <!-- Favicon -->
     <link rel="icon" type="image/png" href="{{BUILD_URL_ICON}}" sizes="32x32">
-
-    <!-- Stylesheet -->
     <link rel="stylesheet" href="{{BUILD_URL_CSS}}">
-
-    <!-- Script with CSP nonce -->
     <script src="{{BUILD_URL_JS}}" defer nonce="<%= nonce %>"></script>
 </head>
 
@@ -46,7 +31,7 @@
             <% for msg in messages { %>
                 <div class="message message-other" ><%= msg %></div>
             <% } %>
-
+            
         </div>
 
         <form class="form-container">
@@ -55,11 +40,7 @@
         </form>
 
     </div>
-    <!--
-    <div class="footer-bar">
-        Background photo © www.bigmike.ch — Licensed under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" class="credit-link">CC BY 4.0</a> 
-    </div>
-    -->
+
     <div id="notification"></div>
 
     <div id="version-info">

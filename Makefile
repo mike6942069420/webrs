@@ -31,7 +31,7 @@ clean:
 run: create_dirs
 	cargo run
 
-format: build
+format:
 	cargo fmt --all
 	cargo clippy
 
