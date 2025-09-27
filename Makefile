@@ -59,12 +59,12 @@ git: format_fix build
 	fi 
 
 deploy: format_fix build
-	sudo docker build -t $(IMAGE_NAME) . #sudo 
-	sudo docker save $(IMAGE_NAME) -o webrs.tar #sudo
-	sudo scp webrs.tar $(REMOTE_USER)@$(REMOTE_HOST):/tmp/webrs.tar #sudo
+	docker build -t $(IMAGE_NAME) . #sudo 
+	docker save $(IMAGE_NAME) -o webrs.tar #sudo
+	scp webrs.tar $(REMOTE_USER)@$(REMOTE_HOST):/tmp/webrs.tar #sudo
 	ssh -t $(REMOTE_USER)@$(REMOTE_HOST) "sudo docker load -i /tmp/webrs.tar && rm /tmp/webrs.tar"
 	ssh -t $(REMOTE_USER)@$(REMOTE_HOST) "cd $(REMOTE_DIR) && sudo docker compose up -d --build"
-	sudo rm webrs.tar #sudo
+	rm webrs.tar #sudo
 
 make full: git deploy
 
